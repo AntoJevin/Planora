@@ -1,28 +1,36 @@
-import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 
 export function useLocalStorage<T>(key: string, initialValue: T) {
-  // Get from local storage then parse stored json or return initialValue
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  });
+    const [storedValue, setStoredValue] = useState<T>(initialValue);
+    const [loading, setLoading] = useState(true);
 
-  // Return a wrapped version of useState's setter function that persists the new value to localStorage
-  const setValue = (value: T | ((val: T) => T)) => {
-    try {
-      // Allow value to be a function so we have the same API as useState
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
-    } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
-    }
-  };
+    useEffect(() => {
+        const loadStoredValue = async () => {
+            try {
+                const item = await AsyncStorage.getItem(key);
+                if (item) {
+                    setStoredValue(JSON.parse(item));
+                }
+            } catch (error) {
+                console.error('Error loading data from AsyncStorage:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  return [storedValue, setValue] as const;
+        loadStoredValue();
+    }, [key]);
+
+    const setValue = async (value: T | ((val: T) => T)) => {
+        try {
+            const valueToStore = value instanceof Function ? value(storedValue) : value;
+            setStoredValue(valueToStore);
+            await AsyncStorage.setItem(key, JSON.stringify(valueToStore));
+        } catch (error) {
+            console.error('Error saving data to AsyncStorage:', error);
+        }
+    };
+
+    return [storedValue, setValue, loading] as const;
 }

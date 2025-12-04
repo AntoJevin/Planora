@@ -1,156 +1,173 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Save, Bell } from 'lucide-react';
+import { Feather } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import { format } from 'date-fns';
-import { useForm } from 'react-hook-form';
-import { Task } from './TaskCalendar';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Task } from '../types';
 
 interface TaskFormProps {
-  selectedDate: Date;
-  onSave: (task: Omit<Task, 'id'>) => void;
-  onBack: () => void;
-  editingTask?: Task;
+    selectedDate: Date;
+    onSave: (task: Omit<Task, 'id'>) => void;
+    onBack: () => void;
+    editingTask?: Task;
 }
 
 interface TaskFormData {
-  name: string;
-  hours: number;
-  completed: boolean;
-  reminder: boolean;
+    name: string;
+    hours: number;
+    completed: boolean;
+    reminder: boolean;
 }
 
-export function TaskForm({ selectedDate, onSave, onBack, editingTask }: TaskFormProps) {
-  const { register, handleSubmit, watch, setValue, formState: { isValid } } = useForm<TaskFormData>({
-    defaultValues: {
-      name: editingTask?.name || '',
-      hours: editingTask?.hours || 1,
-      completed: editingTask?.completed || false,
-      reminder: false,
-    }
-  });
-
-  const watchedHours = watch('hours');
-  const watchedCompleted = watch('completed');
-  const watchedReminder = watch('reminder');
-
-  const onSubmit = (data: TaskFormData) => {
-    onSave({
-      date: selectedDate,
-      name: data.name,
-      hours: data.hours,
-      completed: data.completed,
+export default function TaskForm({ selectedDate, onSave, onBack, editingTask }: TaskFormProps) {
+    const { control, handleSubmit, watch, formState: { isValid } } = useForm<TaskFormData>({
+        defaultValues: {
+            name: editingTask?.name || '',
+            hours: editingTask?.hours || 1,
+            completed: editingTask?.completed || false,
+            reminder: false,
+        }
     });
-    onBack();
-  };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h2 className="text-xl font-bold">
-            {editingTask ? 'Edit Task' : 'New Task'}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-          </p>
-        </div>
-      </div>
+    const watchedHours = watch('hours');
 
-      {/* Form */}
-      <Card className="p-6 shadow-card">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Task Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Task Name</Label>
-            <Input
-              id="name"
-              placeholder="What did you work on?"
-              {...register('name', { required: true })}
-              className="text-base"
-            />
-          </div>
+    const onSubmit = (data: TaskFormData) => {
+        onSave({
+            date: selectedDate,
+            name: data.name,
+            hours: data.hours,
+            completed: data.completed,
+        });
+        onBack();
+    };
 
-          {/* Hours Worked */}
-          <div className="space-y-4">
-            <Label>Hours Worked: {watchedHours}</Label>
-            <Slider
-              value={[watchedHours]}
-              onValueChange={(value) => setValue('hours', value[0])}
-              max={24}
-              min={0.5}
-              step={0.5}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>30 min</span>
-              <span>12 hours</span>
-              <span>24 hours</span>
-            </div>
-          </div>
+    return (
+        <ScrollView className="flex-1 bg-background p-4">
+            {/* Header */}
+            <View className="flex-row items-center gap-4 mb-6">
+                <TouchableOpacity onPress={onBack} className="p-2">
+                    <Feather name="arrow-left" size={24} color="#000" />
+                </TouchableOpacity>
+                <View>
+                    <Text className="text-xl font-bold text-foreground">
+                        {editingTask ? 'Edit Task' : 'New Task'}
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                        {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                    </Text>
+                </View>
+            </View>
 
-          {/* Task Status */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
-            <div className="space-y-1">
-              <Label htmlFor="completed">Mark as Completed</Label>
-              <p className="text-sm text-muted-foreground">
-                Track if this task is finished
-              </p>
-            </div>
-            <Switch
-              id="completed"
-              checked={watchedCompleted}
-              onCheckedChange={(checked) => setValue('completed', checked)}
-            />
-          </div>
+            {/* Form */}
+            <View className="bg-card rounded-xl p-6 shadow-sm border border-border gap-6">
+                {/* Task Name */}
+                <View className="gap-2">
+                    <Text className="font-medium text-foreground">Task Name</Text>
+                    <Controller
+                        control={control}
+                        rules={{ required: true }}
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <TextInput
+                                className="border border-input rounded-md p-3 text-foreground bg-background"
+                                placeholder="What did you work on?"
+                                placeholderTextColor="#9ca3af"
+                                onBlur={onBlur}
+                                onChangeText={onChange}
+                                value={value}
+                            />
+                        )}
+                        name="name"
+                    />
+                </View>
 
-          {/* Reminder */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
-            <div className="space-y-1 flex items-center gap-2">
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <Label htmlFor="reminder">Set Reminder</Label>
-                <p className="text-sm text-muted-foreground">
-                  Get notified tomorrow at 9 AM
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="reminder"
-              checked={watchedReminder}
-              onCheckedChange={(checked) => setValue('reminder', checked)}
-            />
-          </div>
+                {/* Hours Worked */}
+                <View className="gap-4">
+                    <Text className="font-medium text-foreground">Hours Worked: {watchedHours}</Text>
+                    <Controller
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                            <Slider
+                                style={{ width: '100%', height: 40 }}
+                                minimumValue={0.5}
+                                maximumValue={24}
+                                step={0.5}
+                                value={value}
+                                onValueChange={onChange}
+                                minimumTrackTintColor="#6366f1"
+                                maximumTrackTintColor="#e5e7eb"
+                                thumbTintColor="#6366f1"
+                            />
+                        )}
+                        name="hours"
+                    />
+                    <View className="flex-row justify-between">
+                        <Text className="text-xs text-muted-foreground">30 min</Text>
+                        <Text className="text-xs text-muted-foreground">12 hours</Text>
+                        <Text className="text-xs text-muted-foreground">24 hours</Text>
+                    </View>
+                </View>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onBack} 
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={!isValid}
-              className="flex-1 gap-2 bg-gradient-primary"
-            >
-              <Save className="h-4 w-4" />
-              Save Task
-            </Button>
-          </div>
-        </form>
-      </Card>
-    </div>
-  );
+                {/* Task Status */}
+                <View className="flex-row items-center justify-between p-4 rounded-lg bg-muted/30">
+                    <View className="gap-1">
+                        <Text className="font-medium text-foreground">Mark as Completed</Text>
+                        <Text className="text-sm text-muted-foreground">Track if this task is finished</Text>
+                    </View>
+                    <Controller
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                            <Switch
+                                value={value}
+                                onValueChange={onChange}
+                                trackColor={{ false: '#e5e7eb', true: '#6366f1' }}
+                                thumbColor={'#ffffff'}
+                            />
+                        )}
+                        name="completed"
+                    />
+                </View>
+
+                {/* Reminder */}
+                <View className="flex-row items-center justify-between p-4 rounded-lg bg-muted/30">
+                    <View className="flex-row items-center gap-2">
+                        <Feather name="bell" size={16} color="#6b7280" />
+                        <View>
+                            <Text className="font-medium text-foreground">Set Reminder</Text>
+                            <Text className="text-sm text-muted-foreground">Get notified tomorrow at 9 AM</Text>
+                        </View>
+                    </View>
+                    <Controller
+                        control={control}
+                        render={({ field: { onChange, value } }) => (
+                            <Switch
+                                value={value}
+                                onValueChange={onChange}
+                                trackColor={{ false: '#e5e7eb', true: '#6366f1' }}
+                                thumbColor={'#ffffff'}
+                            />
+                        )}
+                        name="reminder"
+                    />
+                </View>
+
+                {/* Action Buttons */}
+                <View className="flex-row gap-3 pt-4">
+                    <TouchableOpacity
+                        onPress={onBack}
+                        className="flex-1 items-center justify-center p-3 rounded-md border border-input"
+                    >
+                        <Text className="font-medium text-foreground">Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={handleSubmit(onSubmit)}
+                        className="flex-1 flex-row items-center justify-center gap-2 bg-primary p-3 rounded-md"
+                    >
+                        <Feather name="save" size={16} color="#ffffff" />
+                        <Text className="font-medium text-primary-foreground">Save Task</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </ScrollView>
+    );
 }
