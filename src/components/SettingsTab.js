@@ -255,8 +255,8 @@ const SettingsTab = () => {
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>TimeSheet App</Text>
-                    <Text style={styles.footerSubtext}>Made by Q's Ministry</Text>
+                    <Text style={styles.footerText}>ManageSelf</Text>
+                    <Text style={styles.footerSubtext}>Made by Q's Ministry / BHITS</Text>
                 </View>
             </ScrollView>
 
