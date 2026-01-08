@@ -11,9 +11,11 @@ import SettingsTab from './src/components/SettingsTab';
 import TimesheetTab from './src/components/TimesheetTab';
 import TodoTab from './src/components/TodoTab';
 import VaultTab from './src/components/VaultTab';
+import { PurchaseProvider } from './src/context/PurchaseContext';
 import { SettingsProvider, useSettings } from './src/context/SettingsContext';
 import { initDB } from './src/database/db';
 import { createTables } from './src/database/schema';
+import PurchaseService from './src/services/PurchaseService';
 
 
 const Tab = createBottomTabNavigator();
@@ -61,21 +63,27 @@ const MainNavigator = () => {
 
 export default function App() {
     const [isDBReady, setIsDBReady] = useState(false);
+    const [isRevenueCatReady, setIsRevenueCatReady] = useState(false);
 
     useEffect(() => {
-        const setupDB = async () => {
+        const setupApp = async () => {
             try {
+                // Initialize database
                 await initDB();
                 await createTables();
                 setIsDBReady(true);
+
+                // Initialize RevenueCat
+                await PurchaseService.configure();
+                setIsRevenueCatReady(true);
             } catch (e) {
-                console.error('Database setup failed:', e);
+                console.error('App setup failed:', e);
             }
         };
-        setupDB();
+        setupApp();
     }, []);
 
-    if (!isDBReady) {
+    if (!isDBReady || !isRevenueCatReady) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#6366f1" />
@@ -85,10 +93,12 @@ export default function App() {
 
     return (
         <SettingsProvider>
-            <SafeAreaProvider>
-                <MainNavigator />
-                <StatusBar style="auto" />
-            </SafeAreaProvider>
+            <PurchaseProvider>
+                <SafeAreaProvider>
+                    <MainNavigator />
+                    <StatusBar style="auto" />
+                </SafeAreaProvider>
+            </PurchaseProvider>
         </SettingsProvider>
     );
 }

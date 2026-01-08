@@ -12,14 +12,21 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import RevenueCatUI from 'react-native-purchases-ui';
+import { usePurchase } from '../context/PurchaseContext';
 import { useSettings } from '../context/SettingsContext';
 import { clearAllData } from '../database/db';
+import PaywallScreen from './PaywallScreen';
+import PurchaseTestScreen from './PurchaseTestScreen';
 
 const SettingsTab = () => {
     const { targetHours, setTargetHours, darkMode, setDarkMode } = useSettings();
+    const { isPremium, hasAccessRenewal, customerInfo, restorePurchases, isLoading } = usePurchase();
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [dailyReminder, setDailyReminder] = useState(true);
     const [taskReminders, setTaskReminders] = useState(true);
+    const [showPaywall, setShowPaywall] = useState(false);
+    const [showPurchaseTest, setShowPurchaseTest] = useState(false);
 
     const [showTargetHoursInput, setShowTargetHoursInput] = useState(false);
     const [tempTargetHours, setTempTargetHours] = useState(targetHours.toString());
@@ -69,6 +76,37 @@ const SettingsTab = () => {
 
     const handleContactSupport = () => {
         Linking.openURL('mailto:contact@qministries.com');
+    };
+
+    const handleUpgradeToPremium = () => {
+        setShowPaywall(true);
+    };
+
+    const handleRestorePurchases = async () => {
+        try {
+            await restorePurchases();
+            Alert.alert('Success', 'Your purchases have been restored!');
+        } catch (error) {
+            Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        }
+    };
+
+    const handleManageSubscription = async () => {
+        try {
+            const result = await RevenueCatUI.presentCustomerCenter();
+            console.log('Customer Center result:', result);
+        } catch (error) {
+            console.error('Error presenting Customer Center:', error);
+            Alert.alert('Error', 'Unable to open subscription management');
+        }
+    };
+
+    const getSubscriptionStatus = () => {
+        if (isLoading) return 'Loading...';
+        if (isPremium || hasAccessRenewal) {
+            return 'Premium Active';
+        }
+        return 'Free';
     };
 
     const SettingSection = ({ title, children }) => (
@@ -169,6 +207,64 @@ const SettingsTab = () => {
                     />
                 </SettingSection>
 
+                {/* Subscription */}
+                <SettingSection title="Subscription">
+                    <SettingItem
+                        icon="star"
+                        title="Subscription Status"
+                        subtitle={getSubscriptionStatus()}
+                        rightComponent={
+                            (isPremium || hasAccessRenewal) ? (
+                                <View style={styles.premiumBadge}>
+                                    <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+                                </View>
+                            ) : null
+                        }
+                    />
+                    {!(isPremium || hasAccessRenewal) && (
+                        <SettingItem
+                            icon="rocket-outline"
+                            title="Upgrade to Premium"
+                            subtitle="Unlock all features"
+                            onPress={handleUpgradeToPremium}
+                            rightComponent={
+                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                            }
+                        />
+                    )}
+                    {(isPremium || hasAccessRenewal) && (
+                        <SettingItem
+                            icon="settings-outline"
+                            title="Manage Subscription"
+                            subtitle="View and manage your subscription"
+                            onPress={handleManageSubscription}
+                            rightComponent={
+                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                            }
+                        />
+                    )}
+                    <SettingItem
+                        icon="refresh-outline"
+                        title="Restore Purchases"
+                        subtitle="Restore previous purchases"
+                        onPress={handleRestorePurchases}
+                        rightComponent={
+                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                        }
+                    />
+                    {__DEV__ && (
+                        <SettingItem
+                            icon="flask"
+                            title="Test Purchases"
+                            subtitle="Development testing tools"
+                            onPress={() => setShowPurchaseTest(true)}
+                            rightComponent={
+                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                            }
+                        />
+                    )}
+                </SettingSection>
+
                 {/* Timesheet Settings */}
                 <SettingSection title="Timesheet Settings">
                     <SettingItem
@@ -260,6 +356,21 @@ const SettingsTab = () => {
                 </View>
             </ScrollView>
 
+            {/* Paywall Modal */}
+            <Modal
+                visible={showPaywall}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowPaywall(false)}
+            >
+                <PaywallScreen
+                    onDismiss={() => setShowPaywall(false)}
+                    onPurchaseCompleted={() => {
+                        setShowPaywall(false);
+                    }}
+                />
+            </Modal>
+
             {/* Target Hours Input Modal */}
             <Modal
                 visible={showTargetHoursInput}
@@ -298,6 +409,26 @@ const SettingsTab = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Purchase Test Screen Modal (Development Only) */}
+            {__DEV__ && (
+                <Modal
+                    visible={showPurchaseTest}
+                    animationType="slide"
+                    presentationStyle="fullScreen"
+                    onRequestClose={() => setShowPurchaseTest(false)}
+                >
+                    <View style={{ flex: 1 }}>
+                        <View style={styles.header}>
+                            <TouchableOpacity onPress={() => setShowPurchaseTest(false)}>
+                                <Ionicons name="close" size={24} color="white" />
+                            </TouchableOpacity>
+                            <Text style={styles.headerTitle}>Purchase Testing</Text>
+                        </View>
+                        <PurchaseTestScreen />
+                    </View>
+                </Modal>
+            )}
         </View>
     );
 };
@@ -450,6 +581,9 @@ const styles = StyleSheet.create({
     modalButtonTextSave: {
         color: 'white',
         fontWeight: '600',
+    },
+    premiumBadge: {
+        padding: 4,
     },
 });
 
