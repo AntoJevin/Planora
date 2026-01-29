@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
+import * as LocalAuthentication from 'expo-local-authentication';
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
@@ -16,8 +17,292 @@ import { useSettings } from '../context/SettingsContext';
 import { VaultService } from '../services/VaultService';
 import { darkColors } from '../theme/darkTheme';
 
+const PasscodeEntry = ({ onUnlock, savedPasscode, colors, styles }) => {
+  const [passcode, setPasscode] = useState('');
+  const [attempts, setAttempts] = useState(0);
+  const [lockoutTime, setLockoutTime] = useState(0);
+
+  React.useEffect(() => {
+    let timer;
+    if (lockoutTime > 0) {
+      timer = setInterval(() => {
+        setLockoutTime((prev) => prev - 1);
+      }, 1000);
+    } else if (lockoutTime === 0 && attempts >= 3) {
+      setAttempts(0);
+    }
+    return () => clearInterval(timer);
+  }, [lockoutTime, attempts]);
+
+  const handleSubmit = () => {
+    if (lockoutTime > 0) return;
+
+    // Simple passcode check
+    if (passcode === savedPasscode) {
+      onUnlock();
+    } else {
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      setPasscode('');
+
+      if (newAttempts >= 3) {
+        setLockoutTime(30);
+        Alert.alert('Vault Locked', 'Too many incorrect attempts. Please try again in 30 seconds.');
+      } else {
+        Alert.alert('Incorrect Passcode', `Try again (${3 - newAttempts} attempts left)`);
+      }
+    }
+  };
+
+  const isLocked = lockoutTime > 0;
+
+  return (
+    <View style={[styles.passcodeContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.passcodeContent, { backgroundColor: colors.surface }]}>
+        <Ionicons name="shield" size={64} color="#6366f1" />
+        <Text style={[styles.passcodeTitle, { color: colors.onSurface }]}>Secure Vault</Text>
+        <Text style={[styles.passcodeSubtitle, { color: colors.subtext }]}>Enter your passcode to continue</Text>
+
+        <View style={styles.passcodeInputContainer}>
+          <TextInput
+            style={[
+              styles.passcodeInput,
+              { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text },
+              isLocked && { opacity: 0.5 }
+            ]}
+            value={passcode}
+            onChangeText={setPasscode}
+            placeholder="Enter passcode"
+            secureTextEntry
+            keyboardType="numeric"
+            maxLength={4}
+            textAlign="center"
+            editable={!isLocked}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.unlockButton, isLocked && { opacity: 0.5 }]}
+          onPress={handleSubmit}
+          disabled={isLocked}
+        >
+          <Ionicons name={isLocked ? "time-outline" : "lock-open"} size={20} color="white" />
+          <Text style={styles.unlockButtonText}>
+            {isLocked ? `Locked (${lockoutTime}s)` : 'Unlock Vault'}
+          </Text>
+        </TouchableOpacity>
+
+        <Text style={[styles.passcodeHint, isLocked && { color: '#ef4444' }]}>
+          {isLocked ? 'Too many incorrect attempts' : 'Use your 4-digit vault passcode'}
+        </Text>
+      </View>
+    </View>
+  );
+};
+
+const VaultItem = ({ entry, onDelete, onEdit, colors, categoryColors, visiblePasswords, togglePasswordVisibility, copyToClipboard, styles }) => {
+  const isPasswordVisible = visiblePasswords[entry.id];
+
+  return (
+    <View style={[styles.vaultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.vaultItemHeader}>
+        <View style={styles.vaultItemTitle}>
+          <Text style={[styles.vaultTitle, { color: colors.onSurface }]}>{entry.title}</Text>
+          <View style={[
+            styles.categoryBadge,
+            { backgroundColor: categoryColors[entry.category] + '20' }
+          ]}>
+            <Text style={[
+              styles.categoryText,
+              { color: categoryColors[entry.category] }
+            ]}>
+              {entry.category}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => onEdit(entry)}
+        >
+          <Ionicons name="pencil-outline" size={20} color="#6366f1" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => onDelete(entry.id)}
+        >
+          <Ionicons name="trash-outline" size={20} color="#ef4444" />
+        </TouchableOpacity>
+      </View>
+
+      {entry.username && (
+        <View style={styles.credentialRow}>
+          <Text style={[styles.credentialLabel, { color: colors.subtext }]}>Username:</Text>
+          <View style={[styles.credentialValue, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.credentialText, { color: colors.text }]}>{entry.username}</Text>
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => copyToClipboard(entry.username, 'Username')}
+            >
+              <Ionicons name="copy-outline" size={16} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {entry.password && (
+        <View style={styles.credentialRow}>
+          <Text style={[styles.credentialLabel, { color: colors.subtext }]}>Password:</Text>
+          <View style={[styles.credentialValue, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <Text style={[styles.credentialText, { color: colors.text }]}>
+              {isPasswordVisible ? entry.password : '••••••••'}
+            </Text>
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => copyToClipboard(entry.password, 'Password')}
+            >
+              <Ionicons name="copy-outline" size={16} color="#6b7280" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => togglePasswordVisibility(entry.id)}
+            >
+              <Ionicons
+                name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+                size={16}
+                color="#6b7280"
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {entry.notes && (
+        <View style={[styles.notesContainer, { borderTopColor: colors.border }]}>
+          <Text style={[styles.notesLabel, { color: colors.subtext }]}>Notes:</Text>
+          <Text style={[styles.notesText, { color: colors.text }]}>{entry.notes}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const AddVaultModal = ({
+  visible,
+  onClose,
+  addEntry,
+  newEntry,
+  setNewEntry,
+  categories,
+  categoryColors,
+  colors,
+  styles,
+  darkMode
+}) => (
+  <Modal
+    visible={visible}
+    animationType="slide"
+    presentationStyle="pageSheet"
+  >
+    <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+      <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={24} color={darkMode ? "#94a3b8" : "#374151"} />
+        </TouchableOpacity>
+        <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+          {newEntry.id ? 'Edit Vault Entry' : 'Add Vault Entry'}
+        </Text>
+        <TouchableOpacity onPress={addEntry}>
+          <Text style={styles.saveButton}>Save</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.modalContent}>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Title *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newEntry.title}
+            onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
+            placeholder="Enter entry title"
+            placeholderTextColor={colors.subtext}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryOption,
+                  newEntry.category === category && styles.selectedCategoryOption,
+                  { borderColor: categoryColors[category], backgroundColor: colors.surface }
+                ]}
+                onPress={() => setNewEntry({ ...newEntry, category })}
+              >
+                <View style={[
+                  styles.categoryColorIndicator,
+                  { backgroundColor: categoryColors[category] }
+                ]} />
+                <Text style={[
+                  styles.categoryOptionText,
+                  { color: colors.subtext },
+                  newEntry.category === category && styles.selectedCategoryOptionText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Username</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newEntry.username}
+            onChangeText={(text) => setNewEntry({ ...newEntry, username: text })}
+            placeholder="Enter username"
+            placeholderTextColor={colors.subtext}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Password</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newEntry.password}
+            onChangeText={(text) => setNewEntry({ ...newEntry, password: text })}
+            placeholder="Enter password"
+            placeholderTextColor={colors.subtext}
+            secureTextEntry
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Notes</Text>
+          <TextInput
+            style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newEntry.notes}
+            onChangeText={(text) => setNewEntry({ ...newEntry, notes: text })}
+            placeholder="Enter notes (optional)"
+            placeholderTextColor={colors.subtext}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+      </ScrollView>
+    </View>
+  </Modal>
+);
+
 const VaultTab = () => {
-  const { darkMode } = useSettings();
+  const {
+    darkMode,
+    vaultPasscode,
+    biometricsEnabled
+  } = useSettings();
   const colors = darkMode ? darkColors : {
     background: '#f8fafc',
     surface: 'white',
@@ -37,9 +322,31 @@ const VaultTab = () => {
     useCallback(() => {
       if (isUnlocked) {
         loadEntries();
+      } else if (biometricsEnabled) {
+        handleBiometricUnlock();
       }
-    }, [isUnlocked])
+    }, [isUnlocked, biometricsEnabled])
   );
+
+  const handleBiometricUnlock = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (hasHardware && isEnrolled) {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Unlock Secure Vault',
+          fallbackLabel: 'Use Passcode',
+        });
+
+        if (result.success) {
+          setIsUnlocked(true);
+        }
+      }
+    } catch (error) {
+      console.error('Biometric unlock error:', error);
+    }
+  };
 
   const loadEntries = async () => {
     try {
@@ -52,6 +359,7 @@ const VaultTab = () => {
   };
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingEntry, setEditingEntry] = useState(null);
   const [newEntry, setNewEntry] = useState({
     title: '',
     username: '',
@@ -82,26 +390,43 @@ const VaultTab = () => {
       return;
     }
 
-    const entry = {
-      ...newEntry,
-      id: Date.now().toString(),
-    };
-
     try {
-      await VaultService.addEntry(entry);
+      if (newEntry.id) {
+        // Edit existing entry
+        await VaultService.updateEntry(newEntry);
+      } else {
+        // Add new entry
+        const entry = {
+          ...newEntry,
+          id: Date.now().toString(),
+        };
+        await VaultService.addEntry(entry);
+      }
+
       await loadEntries();
-      setNewEntry({
-        title: '',
-        username: '',
-        password: '',
-        notes: '',
-        category: 'Email',
-      });
-      setShowAddDialog(false);
+      closeModal();
     } catch (error) {
-      console.error('Error adding vault entry:', error);
-      Alert.alert('Error', 'Failed to add vault entry');
+      console.error('Error saving vault entry:', error);
+      Alert.alert('Error', 'Failed to save vault entry');
     }
+  };
+
+  const editEntry = (entry) => {
+    setEditingEntry(entry);
+    setNewEntry(entry);
+    setShowAddDialog(true);
+  };
+
+  const closeModal = () => {
+    setNewEntry({
+      title: '',
+      username: '',
+      password: '',
+      notes: '',
+      category: 'Email',
+    });
+    setEditingEntry(null);
+    setShowAddDialog(false);
   };
 
   const deleteEntry = (id) => {
@@ -137,240 +462,16 @@ const VaultTab = () => {
     }));
   };
 
-  const PasscodeEntry = ({ onUnlock }) => {
-    const [passcode, setPasscode] = useState('');
-    const [attempts, setAttempts] = useState(0);
-
-    const handleSubmit = () => {
-      // Simple passcode check - in real app, this would be more secure
-      if (passcode === '1234') {
-        onUnlock();
-      } else {
-        setAttempts(attempts + 1);
-        setPasscode('');
-        if (attempts >= 2) {
-          Alert.alert('Too Many Attempts', 'Please try again later');
-          setAttempts(0);
-        } else {
-          Alert.alert('Incorrect Passcode', `Try again (${2 - attempts} attempts left)`);
-        }
-      }
-    };
-
-    return (
-      <View style={[styles.passcodeContainer, { backgroundColor: colors.background }]}>
-        <View style={[styles.passcodeContent, { backgroundColor: colors.surface }]}>
-          <Ionicons name="shield" size={64} color="#6366f1" />
-          <Text style={[styles.passcodeTitle, { color: colors.onSurface }]}>Secure Vault</Text>
-          <Text style={[styles.passcodeSubtitle, { color: colors.subtext }]}>Enter your passcode to continue</Text>
-
-          <View style={styles.passcodeInputContainer}>
-            <TextInput
-              style={[styles.passcodeInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={passcode}
-              onChangeText={setPasscode}
-              placeholder="Enter passcode"
-              secureTextEntry
-              keyboardType="numeric"
-              maxLength={4}
-              textAlign="center"
-            />
-          </View>
-
-          <TouchableOpacity
-            style={styles.unlockButton}
-            onPress={handleSubmit}
-          >
-            <Ionicons name="lock-open" size={20} color="white" />
-            <Text style={styles.unlockButtonText}>Unlock Vault</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.passcodeHint}>Default passcode: 1234</Text>
-        </View>
-      </View>
-    );
-  };
-
-  const VaultItem = ({ entry, onDelete }) => {
-    const isPasswordVisible = visiblePasswords[entry.id];
-
-    return (
-      <View style={[styles.vaultItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.vaultItemHeader}>
-          <View style={styles.vaultItemTitle}>
-            <Text style={[styles.vaultTitle, { color: colors.onSurface }]}>{entry.title}</Text>
-            <View style={[
-              styles.categoryBadge,
-              { backgroundColor: categoryColors[entry.category] + '20' }
-            ]}>
-              <Text style={[
-                styles.categoryText,
-                { color: categoryColors[entry.category] }
-              ]}>
-                {entry.category}
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => onDelete(entry.id)}
-          >
-            <Ionicons name="trash-outline" size={20} color="#ef4444" />
-          </TouchableOpacity>
-        </View>
-
-        {entry.username && (
-          <View style={styles.credentialRow}>
-            <Text style={[styles.credentialLabel, { color: colors.subtext }]}>Username:</Text>
-            <View style={[styles.credentialValue, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.credentialText, { color: colors.text }]}>{entry.username}</Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(entry.username, 'Username')}
-              >
-                <Ionicons name="copy-outline" size={16} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {entry.password && (
-          <View style={styles.credentialRow}>
-            <Text style={[styles.credentialLabel, { color: colors.subtext }]}>Password:</Text>
-            <View style={[styles.credentialValue, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.credentialText, { color: colors.text }]}>
-                {isPasswordVisible ? entry.password : '••••••••'}
-              </Text>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => copyToClipboard(entry.password, 'Password')}
-              >
-                <Ionicons name="copy-outline" size={16} color="#6b7280" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={() => togglePasswordVisibility(entry.id)}
-              >
-                <Ionicons
-                  name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
-                  size={16}
-                  color="#6b7280"
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {entry.notes && (
-          <View style={[styles.notesContainer, { borderTopColor: colors.border }]}>
-            <Text style={[styles.notesLabel, { color: colors.subtext }]}>Notes:</Text>
-            <Text style={[styles.notesText, { color: colors.text }]}>{entry.notes}</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
-
-  const AddVaultModal = () => (
-    <Modal
-      visible={showAddDialog}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
-        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => setShowAddDialog(false)}>
-            <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
-          <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Add Vault Entry</Text>
-          <TouchableOpacity onPress={addEntry}>
-            <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Title *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={newEntry.title}
-              onChangeText={(text) => setNewEntry({ ...newEntry, title: text })}
-              placeholder="Enter entry title"
-              placeholderTextColor={colors.subtext}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {categories.map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={[
-                    styles.categoryOption,
-                    newEntry.category === category && styles.selectedCategoryOption,
-                    { borderColor: categoryColors[category], backgroundColor: colors.surface }
-                  ]}
-                  onPress={() => setNewEntry({ ...newEntry, category })}
-                >
-                  <View style={[
-                    styles.categoryColorIndicator,
-                    { backgroundColor: categoryColors[category] }
-                  ]} />
-                  <Text style={[
-                    styles.categoryOptionText,
-                    { color: colors.subtext },
-                    newEntry.category === category && styles.selectedCategoryOptionText
-                  ]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Username</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={newEntry.username}
-              onChangeText={(text) => setNewEntry({ ...newEntry, username: text })}
-              placeholder="Enter username"
-              placeholderTextColor={colors.subtext}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={newEntry.password}
-              onChangeText={(text) => setNewEntry({ ...newEntry, password: text })}
-              placeholder="Enter password"
-              placeholderTextColor={colors.subtext}
-              secureTextEntry
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Notes</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={newEntry.notes}
-              onChangeText={(text) => setNewEntry({ ...newEntry, notes: text })}
-              placeholder="Enter notes (optional)"
-              placeholderTextColor={colors.subtext}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
 
   if (!isUnlocked) {
-    return <PasscodeEntry onUnlock={() => setIsUnlocked(true)} />;
+    return (
+      <PasscodeEntry
+        onUnlock={() => setIsUnlocked(true)}
+        savedPasscode={vaultPasscode}
+        colors={colors}
+        styles={styles}
+      />
+    );
   }
 
   return (
@@ -389,7 +490,17 @@ const VaultTab = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => setShowAddDialog(true)}
+            onPress={() => {
+              setEditingEntry(null);
+              setNewEntry({
+                title: '',
+                username: '',
+                password: '',
+                notes: '',
+                category: 'Email',
+              });
+              setShowAddDialog(true);
+            }}
           >
             <Ionicons name="add" size={16} color="white" />
             <Text style={styles.addText}>Add</Text>
@@ -439,6 +550,13 @@ const VaultTab = () => {
                   key={entry.id}
                   entry={entry}
                   onDelete={deleteEntry}
+                  onEdit={editEntry}
+                  colors={colors}
+                  categoryColors={categoryColors}
+                  visiblePasswords={visiblePasswords}
+                  togglePasswordVisibility={togglePasswordVisibility}
+                  copyToClipboard={copyToClipboard}
+                  styles={styles}
                 />
               ))}
             </View>
@@ -446,7 +564,18 @@ const VaultTab = () => {
         </View>
       </ScrollView>
 
-      <AddVaultModal />
+      <AddVaultModal
+        visible={showAddDialog}
+        onClose={closeModal}
+        addEntry={addEntry}
+        newEntry={newEntry}
+        setNewEntry={setNewEntry}
+        categories={categories}
+        categoryColors={categoryColors}
+        colors={colors}
+        styles={styles}
+        darkMode={darkMode}
+      />
     </View>
   );
 };
@@ -614,6 +743,10 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+  },
+  editButton: {
+    padding: 8,
+    marginRight: 4,
   },
   credentialRow: {
     marginBottom: 8,

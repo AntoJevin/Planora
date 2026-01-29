@@ -14,11 +14,235 @@ import {
 } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
 import { useSettings } from '../context/SettingsContext';
+import { EmployerService } from '../services/EmployerService';
 import { TaskService } from '../services/TaskService';
 import { darkColors } from '../theme/darkTheme';
+import EmployerForm from './EmployerForm';
+import MonthlyReport from './MonthlyReport';
 import WeeklyReport from './WeeklyReport';
 
 const DateTimePicker = require('@react-native-community/datetimepicker').default;
+
+const TaskEntryModal = ({
+  visible,
+  onClose,
+  onSave,
+  editingTask,
+  newTask,
+  setNewTask,
+  showPunchInPicker,
+  setShowPunchInPicker,
+  showPunchOutPicker,
+  setShowPunchOutPicker,
+  onPunchInChange,
+  onPunchOutChange,
+  confirmPunchIn,
+  confirmPunchOut,
+  tempPunchIn,
+  tempPunchOut,
+  getDateTimeFromTime,
+  colors,
+  darkMode,
+}) => (
+  <Modal
+    visible={visible}
+    animationType="slide"
+    presentationStyle="pageSheet"
+    onRequestClose={onClose}
+  >
+    <View style={[styles.modalContainer, darkMode && { backgroundColor: '#0f172a' }]}>
+      <View style={[styles.modalHeader, darkMode && { borderBottomColor: '#1e293b' }]}>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={24} color={darkMode ? "#94a3b8" : "#374151"} />
+        </TouchableOpacity>
+        <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+          {editingTask ? 'Edit Task' : 'Add Task'}
+        </Text>
+        <TouchableOpacity onPress={onSave}>
+          <Text style={styles.saveButton}>Save</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.modalContent}>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Task Title *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newTask.title}
+            onChangeText={(text) => setNewTask({ ...newTask, title: text })}
+            placeholder="Enter task title"
+            placeholderTextColor={colors.subtext}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Description</Text>
+          <TextInput
+            style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newTask.description}
+            onChangeText={(text) => setNewTask({ ...newTask, description: text })}
+            placeholder="Enter task description"
+            placeholderTextColor={colors.subtext}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        {/* Punch In */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Punch In</Text>
+          <TouchableOpacity
+            style={[styles.timePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setShowPunchInPicker(true)}
+          >
+            <Ionicons name="time-outline" size={20} color={darkMode ? "#64748b" : "#6b7280"} />
+            <Text style={[
+              styles.timePickerButtonText,
+              { color: newTask.punchIn ? colors.text : colors.subtext }
+            ]}>
+              {newTask.punchIn || 'Select time'}
+            </Text>
+          </TouchableOpacity>
+          {showPunchInPicker && (
+            <View>
+              {Platform.OS === 'ios' && (
+                <View style={[styles.pickerActions, darkMode && { backgroundColor: '#1e293b', borderBottomColor: '#334155' }]}>
+                  <TouchableOpacity
+                    onPress={() => setShowPunchInPicker(false)}
+                    style={styles.pickerButton}
+                  >
+                    <Text style={[styles.pickerActionCancel, darkMode && { color: '#94a3b8' }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={confirmPunchIn}
+                    style={[styles.pickerButton, styles.confirmButtonBg]}
+                  >
+                    <Text style={styles.pickerActionConfirm}>Confirm</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <DateTimePicker
+                value={tempPunchIn || getDateTimeFromTime(newTask.punchIn)}
+                mode="time"
+                is24Hour={false}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onPunchInChange}
+              />
+            </View>
+          )}
+        </View>
+
+        {/* Punch Out */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Punch Out</Text>
+          <TouchableOpacity
+            style={[styles.timePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setShowPunchOutPicker(true)}
+          >
+            <Ionicons name="time-outline" size={20} color={darkMode ? "#64748b" : "#6b7280"} />
+            <Text style={[
+              styles.timePickerButtonText,
+              { color: newTask.punchOut ? colors.text : colors.subtext }
+            ]}>
+              {newTask.punchOut || 'Select time'}
+            </Text>
+          </TouchableOpacity>
+          {showPunchOutPicker && (
+            <View>
+              {Platform.OS === 'ios' && (
+                <View style={[styles.pickerActions, darkMode && { backgroundColor: '#1e293b', borderBottomColor: '#334155' }]}>
+                  <TouchableOpacity
+                    onPress={() => setShowPunchOutPicker(false)}
+                    style={styles.pickerButton}
+                  >
+                    <Text style={[styles.pickerActionCancel, darkMode && { color: '#94a3b8' }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={confirmPunchOut}
+                    style={[styles.pickerButton, styles.confirmButtonBg]}
+                  >
+                    <Text style={styles.pickerActionConfirm}>Confirm</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <DateTimePicker
+                value={tempPunchOut || getDateTimeFromTime(newTask.punchOut)}
+                mode="time"
+                is24Hour={false}
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onPunchOutChange}
+              />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Hours Spent (Auto-calculated)</Text>
+          <TextInput
+            style={[styles.input, styles.disabledInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.subtext }]}
+            value={newTask.hoursSpent}
+            placeholder="Auto-calculated"
+            editable={false}
+          />
+        </View>
+      </ScrollView>
+    </View>
+  </Modal>
+);
+
+const ReportSelectionSheet = ({ visible, onClose, onSelect, darkMode }) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="fade"
+    onRequestClose={onClose}
+  >
+    <TouchableOpacity
+      style={styles.modalOverlay}
+      activeOpacity={1}
+      onPress={onClose}
+    >
+      <View style={[styles.bottomSheet, darkMode && { backgroundColor: '#1e293b' }]}>
+        <View style={[styles.sheetIndicator, darkMode && { backgroundColor: '#334155' }]} />
+        <Text style={[styles.sheetTitle, darkMode && { color: '#f1f5f9' }]}>Generate Report</Text>
+        <View style={styles.sheetOptions}>
+          <TouchableOpacity
+            style={[styles.sheetOption, darkMode && { borderBottomColor: '#334155' }]}
+            onPress={() => onSelect('weekly')}
+          >
+            <View style={[styles.sheetIconBg, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+              <Ionicons name="calendar-outline" size={24} color="#6366f1" />
+            </View>
+            <View>
+              <Text style={[styles.sheetOptionTitle, darkMode && { color: '#f1f5f9' }]}>Weekly Report</Text>
+              <Text style={[styles.sheetOptionSub, darkMode && { color: '#94a3b8' }]}>Summary of the current week</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.sheetOption}
+            onPress={() => onSelect('monthly')}
+          >
+            <View style={[styles.sheetIconBg, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <Ionicons name="list-outline" size={24} color="#10b981" />
+            </View>
+            <View>
+              <Text style={[styles.sheetOptionTitle, darkMode && { color: '#f1f5f9' }]}>Monthly Report</Text>
+              <Text style={[styles.sheetOptionSub, darkMode && { color: '#94a3b8' }]}>Full breakdown of the month</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          style={[styles.sheetCloseButton, darkMode && { backgroundColor: '#334155' }]}
+          onPress={onClose}
+        >
+          <Text style={[styles.sheetCloseText, darkMode && { color: '#f1f5f9' }]}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  </Modal>
+);
+
 const TimesheetTab = () => {
   const { darkMode } = useSettings();
   const colors = darkMode ? darkColors : {
@@ -36,10 +260,14 @@ const TimesheetTab = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showTaskEntry, setShowTaskEntry] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [reportType, setReportType] = useState('weekly');
+  const [showSelectionSheet, setShowSelectionSheet] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
   const [showPunchInPicker, setShowPunchInPicker] = useState(false);
   const [showPunchOutPicker, setShowPunchOutPicker] = useState(false);
+  const [tempPunchIn, setTempPunchIn] = useState(null);
+  const [tempPunchOut, setTempPunchOut] = useState(null);
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -49,12 +277,28 @@ const TimesheetTab = () => {
     hoursSpent: '',
   });
 
+  const [currentEmployer, setCurrentEmployer] = useState(null);
+  const [showEmployerForm, setShowEmployerForm] = useState(false);
+
 
   useFocusEffect(
     useCallback(() => {
       loadTasks();
+      loadEmployer();
     }, [])
   );
+
+  const loadEmployer = async () => {
+    try {
+      const employer = await EmployerService.getEmployer();
+      setCurrentEmployer(employer);
+      if (employer) {
+        setNewTask(prev => ({ ...prev, employer: employer.companyName }));
+      }
+    } catch (error) {
+      console.error('Error loading employer:', error);
+    }
+  };
 
   const loadTasks = async () => {
     try {
@@ -74,6 +318,16 @@ const TimesheetTab = () => {
     if (!newTask.title.trim()) {
       Alert.alert('Error', 'Please enter a task title');
       return;
+    }
+
+    // Validation for punch in/out
+    if (newTask.punchIn && newTask.punchOut) {
+      const start = getDateTimeFromTime(newTask.punchIn);
+      const end = getDateTimeFromTime(newTask.punchOut);
+      if (end < start) {
+        Alert.alert('Invalid Time', 'Punch out time cannot be earlier than punch in time.');
+        return;
+      }
     }
 
     try {
@@ -114,7 +368,7 @@ const TimesheetTab = () => {
     setNewTask({
       title: task.title,
       description: task.description || '',
-      employer: task.employer || '',
+      employer: task.employer || (currentEmployer ? currentEmployer.companyName : ''),
       punchIn: task.punchIn || '',
       punchOut: task.punchOut || '',
       hoursSpent: task.hoursSpent || '',
@@ -181,7 +435,7 @@ const TimesheetTab = () => {
       if (startTime === null || endTime === null) return '';
 
       let diff = endTime - startTime;
-      if (diff < 0) diff += 24; // Handle overnight shifts
+      if (diff < 0) return ''; // Don't calculate if out < in
 
       return diff.toFixed(2);
     } catch (error) {
@@ -214,177 +468,115 @@ const TimesheetTab = () => {
     return `${hours}:${minutesStr} ${period} `;
   };
 
-  const onPunchInChange = (event, selectedDate) => {
-    const currentDate = selectedDate || new Date();
+  // Convert 12-hour format string to Date object for picker value
+  const getDateTimeFromTime = (timeString) => {
+    if (!timeString) return new Date(); // Default to current time if no time string
 
+    const now = new Date();
+    const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return now;
+
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const period = match[3].toUpperCase();
+
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+
+    now.setHours(hours, minutes, 0, 0);
+    return now;
+  };
+
+  const onPunchInChange = (event, selectedDate) => {
     if (Platform.OS === 'android') {
       setShowPunchInPicker(false);
-    }
-
-    if (event.type === 'set' && selectedDate) {
-      const timeString = formatTimeTo12Hour(selectedDate);
-      handlePunchInChange(timeString);
-      if (Platform.OS === 'ios') {
-        setShowPunchInPicker(false);
+      if (event.type === 'set' && selectedDate) {
+        handlePunchInChange(formatTimeTo12Hour(selectedDate));
       }
-    } else if (event.type === 'dismissed') {
-      setShowPunchInPicker(false);
+    } else {
+      // iOS: Just update temp state, don't close
+      if (selectedDate) {
+        setTempPunchIn(selectedDate);
+      }
     }
   };
 
   const onPunchOutChange = (event, selectedDate) => {
-    const currentDate = selectedDate || new Date();
-
     if (Platform.OS === 'android') {
       setShowPunchOutPicker(false);
-    }
-
-    if (event.type === 'set' && selectedDate) {
-      const timeString = formatTimeTo12Hour(selectedDate);
-      handlePunchOutChange(timeString);
-      if (Platform.OS === 'ios') {
-        setShowPunchOutPicker(false);
+      if (event.type === 'set' && selectedDate) {
+        handlePunchOutChange(formatTimeTo12Hour(selectedDate));
       }
-    } else if (event.type === 'dismissed') {
-      setShowPunchOutPicker(false);
+    } else {
+      // iOS: Just update temp state, don't close
+      if (selectedDate) {
+        setTempPunchOut(selectedDate);
+      }
     }
   };
 
-  const getCompletedHoursForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return tasks
-      .filter(task => task.date === dateStr && task.completed)
-      .reduce((total, task) => total + parseFloat(task.hoursSpent || 0), 0);
+  const confirmPunchIn = () => {
+    if (tempPunchIn) {
+      handlePunchInChange(formatTimeTo12Hour(tempPunchIn));
+    }
+    setShowPunchInPicker(false);
+    setTempPunchIn(null);
   };
 
-  const TaskEntryModal = () => (
-    <Modal
-      visible={showTaskEntry}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => {
-            setShowTaskEntry(false);
-            setEditingTask(null);
-          }}>
-            <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>{editingTask ? 'Edit Task' : 'Add Task'}</Text>
-          <TouchableOpacity onPress={addTask}>
-            <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
-        </View>
+  const confirmPunchOut = () => {
+    if (tempPunchOut) {
+      handlePunchOutChange(formatTimeTo12Hour(tempPunchOut));
+    }
+    setShowPunchOutPicker(false);
+    setTempPunchOut(null);
+  };
 
-        <ScrollView style={styles.modalContent}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Task Title *</Text>
-            <TextInput
-              style={styles.input}
-              value={newTask.title}
-              onChangeText={(text) => setNewTask({ ...newTask, title: text })}
-              placeholder="Enter task title"
-            />
-          </View>
+  const handleReportSelect = (type) => {
+    setReportType(type);
+    setShowSelectionSheet(false);
+    setShowReports(true);
+  };
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Description</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={newTask.description}
-              onChangeText={(text) => setNewTask({ ...newTask, description: text })}
-              placeholder="Enter task description"
-              multiline
-              numberOfLines={3}
-            />
-          </View>
+  const handleSaveEmployer = async (employerData) => {
+    try {
+      await EmployerService.saveEmployer(employerData);
+      setCurrentEmployer(employerData);
+      setNewTask(prev => ({ ...prev, employer: employerData.companyName }));
+      setShowEmployerForm(false);
+      Alert.alert('Success', 'Employer details saved');
+    } catch (error) {
+      console.error('Error saving employer:', error);
+      Alert.alert('Error', 'Failed to save employer details');
+    }
+  };
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Employer</Text>
-            <TextInput
-              style={styles.input}
-              value={newTask.employer}
-              onChangeText={(text) => setNewTask({ ...newTask, employer: text })}
-              placeholder="Enter employer name"
-            />
-          </View>
-
-          {/* Punch In */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Punch In</Text>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={() => setShowPunchInPicker(true)}
-            >
-              <Ionicons name="time-outline" size={20} color="#6b7280" />
-              <Text style={styles.timePickerButtonText}>
-                {newTask.punchIn || 'Select time'}
-              </Text>
-            </TouchableOpacity>
-            {showPunchInPicker && (
-              <DateTimePicker
-                value={new Date()}
-                mode="time"
-                is24Hour={false}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onPunchInChange}
-              />
-            )}
-          </View>
-
-          {/* Punch Out */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Punch Out</Text>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={() => setShowPunchOutPicker(true)}
-            >
-              <Ionicons name="time-outline" size={20} color="#6b7280" />
-              <Text style={styles.timePickerButtonText}>
-                {newTask.punchOut || 'Select time'}
-              </Text>
-            </TouchableOpacity>
-            {showPunchOutPicker && (
-              <DateTimePicker
-                value={new Date()}
-                mode="time"
-                is24Hour={false}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onPunchOutChange}
-              />
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Hours Spent (Auto-calculated)</Text>
-            <TextInput
-              style={[styles.input, styles.disabledInput]}
-              value={newTask.hoursSpent}
-              placeholder="Auto-calculated"
-              editable={false}
-            />
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-
-  // Convert tasks to match the Task interface expected by WeeklyReport
-  const convertedTasks = tasks.map(task => ({
-    id: task.id,
-    date: new Date(task.date),
-    name: task.title,
-    hours: parseFloat(task.hoursSpent || 0),
-    completed: task.completed,
-  }));
+  // Helper for dates in Reports - Use parseISO or split to avoid timezone shifts
+  const convertedTasks = tasks.map(task => {
+    // task.date is 'YYYY-MM-DD', new Date('YYYY-MM-DD') can be interpreted as UTC
+    // and shifted to the previous day in some timezones.
+    const [year, month, day] = task.date.split('-').map(Number);
+    return {
+      ...task,
+      date: new Date(year, month - 1, day),
+      name: task.title,
+      hours: parseFloat(task.hoursSpent || 0),
+    };
+  });
 
   if (showReports) {
-    return (
+    return reportType === 'weekly' ? (
       <WeeklyReport
         tasks={convertedTasks}
-        selectedDate={selectedDate}
         onBack={() => setShowReports(false)}
+        selectedDate={selectedDate}
+        employer={currentEmployer}
+      />
+    ) : (
+      <MonthlyReport
+        tasks={convertedTasks}
+        onBack={() => setShowReports(false)}
+        selectedDate={selectedDate}
+        employer={currentEmployer}
       />
     );
   }
@@ -397,18 +589,27 @@ const TimesheetTab = () => {
           <Ionicons name="calendar" size={24} color="white" />
           <Text style={styles.headerTitle}>Timesheet</Text>
         </View>
-        <TouchableOpacity
-          style={styles.reportsButton}
-          onPress={() => setShowReports(true)}
-        >
-          <Ionicons name="bar-chart" size={16} color="white" />
-          <Text style={styles.reportsText}>Reports</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setShowEmployerForm(true)}
+          >
+            <Ionicons name="business" size={16} color="white" />
+            <Text style={styles.headerButtonText}>Employer</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setShowSelectionSheet(true)}
+          >
+            <Ionicons name="bar-chart" size={16} color="white" />
+            <Text style={styles.headerButtonText}>Reports</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
         {/* Calendar */}
-        <View style={[styles.calendarContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.calendarContainer, { backgroundColor: colors.surface }, darkMode && { shadowColor: '#000', shadowOpacity: 0.3 }]}>
           <CalendarPicker
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
@@ -424,7 +625,7 @@ const TimesheetTab = () => {
         </View>
 
         {/* Tasks for Selected Date */}
-        <View style={[styles.tasksContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.tasksContainer, { backgroundColor: colors.surface }, darkMode && { shadowColor: '#000', shadowOpacity: 0.3 }]}>
           <View style={[styles.tasksHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.tasksTitle, { color: colors.onSurface }]}>
               {selectedDate.toLocaleDateString('en-US', {
@@ -451,7 +652,7 @@ const TimesheetTab = () => {
           ) : (
             <View style={styles.tasksList}>
               {tasksForSelectedDate.map((task) => (
-                <View key={task.id} style={[styles.taskItem, { backgroundColor: colors.surface }]}>
+                <View key={task.id} style={[styles.taskItem, { backgroundColor: colors.surface }, darkMode && { backgroundColor: '#1e293b', borderLeftColor: '#6366f1', borderLeftWidth: 3 }]}>
                   <TouchableOpacity
                     style={styles.taskCheckbox}
                     onPress={() => toggleTaskCompletion(task.id)}
@@ -474,11 +675,15 @@ const TimesheetTab = () => {
                       </Text>
                       <View style={[
                         styles.statusBadge,
-                        task.completed ? styles.completedBadge : styles.pendingBadge
+                        task.completed ? styles.completedBadge : styles.pendingBadge,
+                        darkMode && task.completed && { backgroundColor: 'rgba(22, 101, 52, 0.2)' },
+                        darkMode && !task.completed && { backgroundColor: 'rgba(146, 64, 14, 0.2)' }
                       ]}>
                         <Text style={[
                           styles.statusText,
-                          task.completed ? styles.completedStatusText : styles.pendingStatusText
+                          task.completed ? styles.completedStatusText : styles.pendingStatusText,
+                          darkMode && task.completed && { color: '#4ade80' },
+                          darkMode && !task.completed && { color: '#fbbf24' }
                         ]}>
                           {task.completed ? 'Complete' : 'Pending'}
                         </Text>
@@ -486,17 +691,17 @@ const TimesheetTab = () => {
                     </View>
 
                     {task.description && (
-                      <Text style={styles.taskDescription}>{task.description}</Text>
+                      <Text style={[styles.taskDescription, darkMode && { color: '#94a3b8' }]}>{task.description}</Text>
                     )}
 
                     <View style={styles.taskDetails}>
                       {task.employer && (
-                        <Text style={styles.taskDetail}>👤 {task.employer}</Text>
+                        <Text style={[styles.taskDetail, darkMode && { color: '#64748b' }]}>🏢 {task.employer}</Text>
                       )}
                       {task.punchIn && task.punchOut && (
-                        <Text style={styles.taskDetail}>🕐 {task.punchIn} - {task.punchOut}</Text>
+                        <Text style={[styles.taskDetail, darkMode && { color: '#64748b' }]}>🕐 {task.punchIn} - {task.punchOut}</Text>
                       )}
-                      <Text style={styles.taskDetail}>⏱️ {task.hoursSpent}h</Text>
+                      <Text style={[styles.taskDetail, darkMode && { color: '#64748b' }]}>⏱️ {task.hoursSpent}h</Text>
                     </View>
                   </View>
 
@@ -521,7 +726,47 @@ const TimesheetTab = () => {
         </View>
       </ScrollView>
 
-      <TaskEntryModal />
+      <TaskEntryModal
+        visible={showTaskEntry}
+        onClose={() => {
+          setShowTaskEntry(false);
+          setEditingTask(null);
+          setTempPunchIn(null); // Clear temp state on close
+          setTempPunchOut(null); // Clear temp state on close
+        }}
+        onSave={addTask}
+        editingTask={editingTask}
+        newTask={newTask}
+        setNewTask={setNewTask}
+        showPunchInPicker={showPunchInPicker}
+        setShowPunchInPicker={setShowPunchInPicker}
+        showPunchOutPicker={showPunchOutPicker}
+        setShowPunchOutPicker={setShowPunchOutPicker}
+        onPunchInChange={onPunchInChange}
+        onPunchOutChange={onPunchOutChange}
+        confirmPunchIn={confirmPunchIn}
+        confirmPunchOut={confirmPunchOut}
+        tempPunchIn={tempPunchIn}
+        tempPunchOut={tempPunchOut}
+        getDateTimeFromTime={getDateTimeFromTime}
+        colors={colors}
+        darkMode={darkMode}
+      />
+
+      <EmployerForm
+        visible={showEmployerForm}
+        employer={currentEmployer}
+        onSave={handleSaveEmployer}
+        onCancel={() => setShowEmployerForm(false)}
+        darkMode={darkMode}
+      />
+
+      <ReportSelectionSheet
+        visible={showSelectionSheet}
+        onClose={() => setShowSelectionSheet(false)}
+        onSelect={handleReportSelect}
+        darkMode={darkMode}
+      />
     </View>
   );
 };
@@ -550,18 +795,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
-  reportsButton: {
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  reportsText: {
+  headerButtonText: {
     color: 'white',
-    marginLeft: 4,
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -744,6 +994,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
   saveButton: {
     fontSize: 16,
     fontWeight: '600',
@@ -794,6 +1049,99 @@ const styles = StyleSheet.create({
   timePickerButtonText: {
     fontSize: 16,
     color: '#111827',
+  },
+  bottomSheet: {
+    backgroundColor: 'white',
+    paddingBottom: 40,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+  },
+  sheetIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  sheetOptions: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  pickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    alignItems: 'center',
+  },
+  pickerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  confirmButtonBg: {
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+  },
+  pickerActionConfirm: {
+    color: '#6366f1',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  pickerActionCancel: {
+    color: '#64748b',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  sheetIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sheetOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  sheetOptionSub: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  sheetCloseButton: {
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  sheetCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
   },
   row: {
     flexDirection: 'row',

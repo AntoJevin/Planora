@@ -1,4 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { endOfWeek, format, startOfWeek } from 'date-fns';
+import * as FileSystem from 'expo-file-system';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { printToFileAsync } from 'expo-print';
+import { shareAsync } from 'expo-sharing';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -16,11 +21,184 @@ import RevenueCatUI from 'react-native-purchases-ui';
 import { usePurchase } from '../context/PurchaseContext';
 import { useSettings } from '../context/SettingsContext';
 import { clearAllData } from '../database/db';
+import { TaskService } from '../services/TaskService';
 import PaywallScreen from './PaywallScreen';
 import PurchaseTestScreen from './PurchaseTestScreen';
 
+const SettingSection = ({ title, children, styles }) => (
+    <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {children}
+    </View>
+);
+
+const SettingItem = ({ icon, title, subtitle, rightComponent, onPress, darkMode, styles }) => (
+    <TouchableOpacity
+        style={[styles.settingItem, darkMode && { backgroundColor: '#2d3748' }]}
+        onPress={onPress}
+        disabled={!onPress}
+    >
+        <View style={styles.settingLeft}>
+            <View style={styles.iconContainer}>
+                <Ionicons name={icon} size={20} color="#6366f1" />
+            </View>
+            <View style={styles.settingText}>
+                <Text style={[styles.settingTitle, darkMode && { color: '#f3f4f6' }]}>{title}</Text>
+                {subtitle && <Text style={[styles.settingSubtitle, darkMode && { color: '#d1d5db' }]}>{subtitle}</Text>}
+            </View>
+        </View>
+        {rightComponent}
+    </TouchableOpacity>
+);
+
+const TargetHoursModal = ({ visible, onClose, onSave, value, setValue, styles, darkMode }) => (
+    <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={onClose}
+    >
+        <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, darkMode && { backgroundColor: '#1e293b' }]}>
+                <Text style={[styles.modalTitle, darkMode && { color: '#f1f5f9' }]}>Set Weekly Target Hours</Text>
+                <Text style={[styles.modalSubtitle, darkMode && { color: '#94a3b8' }]}>
+                    Enter your target work hours per week
+                </Text>
+                <TextInput
+                    style={[styles.modalInput, darkMode && { backgroundColor: '#334155', borderColor: '#475569', color: '#f1f5f9' }]}
+                    value={value}
+                    onChangeText={setValue}
+                    keyboardType="decimal-pad"
+                    placeholder="40"
+                    placeholderTextColor={darkMode ? "#64748b" : "#9ca3af"}
+                    autoFocus
+                />
+                <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                        style={[styles.modalButton, styles.modalButtonCancel, darkMode && { backgroundColor: '#334155' }]}
+                        onPress={onClose}
+                    >
+                        <Text style={[styles.modalButtonTextCancel, darkMode && { color: '#94a3b8' }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.modalButton, styles.modalButtonSave]}
+                        onPress={onSave}
+                    >
+                        <Text style={styles.modalButtonTextSave}>Save</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+    </Modal>
+);
+
+const PasscodeModal = ({
+    visible,
+    onClose,
+    onSubmit,
+    mode,
+    lockoutTime,
+    passcodeIn,
+    setPasscodeIn,
+    newPasscode,
+    setNewPasscode,
+    confirmPasscode,
+    setConfirmPasscode,
+    styles,
+    darkMode
+}) => (
+    <Modal
+        visible={visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={onClose}
+    >
+        <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, darkMode && { backgroundColor: '#1e293b' }]}>
+                <Text style={[styles.modalTitle, darkMode && { color: '#f1f5f9' }]}>
+                    {lockoutTime > 0
+                        ? `Locked (${lockoutTime}s)`
+                        : (mode === 'verify' ? 'Enter Current Passcode' : 'Set New Passcode')}
+                </Text>
+
+                {mode === 'verify' ? (
+                    <TextInput
+                        style={[styles.modalInput, lockoutTime > 0 && { opacity: 0.5 }, darkMode && { backgroundColor: '#334155', borderColor: '#475569', color: '#f1f5f9' }]}
+                        value={passcodeIn}
+                        onChangeText={setPasscodeIn}
+                        keyboardType="numeric"
+                        maxLength={4}
+                        secureTextEntry
+                        placeholder="••••"
+                        placeholderTextColor={darkMode ? "#64748b" : "#9ca3af"}
+                        autoFocus
+                        editable={lockoutTime === 0}
+                    />
+                ) : (
+                    <View>
+                        <Text style={[styles.inputLabel, darkMode && { color: '#94a3b8' }]}>New Passcode</Text>
+                        <TextInput
+                            style={[styles.modalInput, darkMode && { backgroundColor: '#334155', borderColor: '#475569', color: '#f1f5f9' }]}
+                            value={newPasscode}
+                            onChangeText={setNewPasscode}
+                            keyboardType="numeric"
+                            maxLength={4}
+                            secureTextEntry
+                            placeholder="••••"
+                            placeholderTextColor={darkMode ? "#64748b" : "#9ca3af"}
+                            autoFocus
+                        />
+                        <Text style={[styles.inputLabel, darkMode && { color: '#94a3b8' }]}>Confirm New Passcode</Text>
+                        <TextInput
+                            style={[styles.modalInput, darkMode && { backgroundColor: '#334155', borderColor: '#475569', color: '#f1f5f9' }]}
+                            value={confirmPasscode}
+                            onChangeText={setConfirmPasscode}
+                            keyboardType="numeric"
+                            maxLength={4}
+                            secureTextEntry
+                            placeholder="••••"
+                            placeholderTextColor={darkMode ? "#64748b" : "#9ca3af"}
+                        />
+                    </View>
+                )}
+
+                <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                        style={[styles.modalButton, styles.modalButtonCancel, darkMode && { backgroundColor: '#334155' }]}
+                        onPress={onClose}
+                    >
+                        <Text style={[styles.modalButtonTextCancel, darkMode && { color: '#94a3b8' }]}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[
+                            styles.modalButton,
+                            styles.modalButtonSave,
+                            lockoutTime > 0 && { opacity: 0.5 }
+                        ]}
+                        onPress={onSubmit}
+                        disabled={lockoutTime > 0}
+                    >
+                        <Text style={styles.modalButtonTextSave}>
+                            {mode === 'verify' ? 'Verify' : 'Update'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+    </Modal>
+);
+
 const SettingsTab = () => {
-    const { targetHours, setTargetHours, darkMode, setDarkMode } = useSettings();
+    const {
+        targetHours,
+        setTargetHours,
+        darkMode,
+        setDarkMode,
+        vaultPasscode,
+        setVaultPasscode,
+        biometricsEnabled,
+        setBiometricsEnabled
+    } = useSettings();
     const { isPremium, hasAccessRenewal, customerInfo, restorePurchases, isLoading } = usePurchase();
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [dailyReminder, setDailyReminder] = useState(true);
@@ -31,15 +209,37 @@ const SettingsTab = () => {
     const [showTargetHoursInput, setShowTargetHoursInput] = useState(false);
     const [tempTargetHours, setTempTargetHours] = useState(targetHours.toString());
 
+    // Security states
+    const [showPasscodeModal, setShowPasscodeModal] = useState(false);
+    const [passcodeMode, setPasscodeMode] = useState('verify'); // 'verify' or 'new'
+    const [passcodeType, setPasscodeType] = useState('change'); // 'change' or 'toggle'
+    const [passcodeIn, setPasscodeIn] = useState('');
+    const [newPasscode, setNewPasscode] = useState('');
+    const [confirmPasscode, setConfirmPasscode] = useState('');
+    const [securityAttempts, setSecurityAttempts] = useState(0);
+    const [securityLockoutTime, setSecurityLockoutTime] = useState(0);
+
+    React.useEffect(() => {
+        let timer;
+        if (securityLockoutTime > 0) {
+            timer = setInterval(() => {
+                setSecurityLockoutTime((prev) => prev - 1);
+            }, 1000);
+        } else if (securityLockoutTime === 0 && securityAttempts >= 3) {
+            setSecurityAttempts(0);
+        }
+        return () => clearInterval(timer);
+    }, [securityLockoutTime, securityAttempts]);
+
     const handleSaveTargetHours = () => {
         const hours = parseFloat(tempTargetHours);
-        if (isNaN(hours) || hours <= 0 || hours > 24) {
-            Alert.alert('Invalid Input', 'Please enter a valid number between 1 and 24');
+        if (isNaN(hours) || hours <= 0 || hours > 168) {
+            Alert.alert('Invalid Input', 'Please enter a valid number between 1 and 168');
             return;
         }
         setTargetHours(hours);
         setShowTargetHoursInput(false);
-        Alert.alert('Success', `Target hours set to ${hours} hours per day`);
+        Alert.alert('Success', `Target hours set to ${hours} hours per week`);
     };
 
     const handleClearData = () => {
@@ -50,7 +250,6 @@ const SettingsTab = () => {
                 { text: 'Cancel', style: 'cancel' },
                 {
                     text: 'Clear Data',
-                    style: 'destructive',
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -66,8 +265,96 @@ const SettingsTab = () => {
         );
     };
 
-    const handleExportData = () => {
-        Alert.alert('Export Data', 'Data export feature coming soon!');
+    const handleExportData = async () => {
+        Alert.alert('Export Started', 'Generating PDF...');
+        try {
+            const allTasks = await TaskService.getAllTasks();
+            const today = new Date();
+            const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+            const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+            const weeklyTasks = allTasks.filter(task => {
+                const taskDate = new Date(task.date);
+                return taskDate >= weekStart && taskDate <= weekEnd;
+            });
+
+            const totalHours = weeklyTasks.reduce((sum, task) => sum + (parseFloat(task.hoursSpent) || 0), 0);
+            const completedTasks = weeklyTasks.filter(task => task.completed).length;
+            const totalTasks = weeklyTasks.length;
+            const completionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+            const html = `
+                <html>
+                  <head>
+                    <style>
+                      body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; }
+                      h1 { color: #111827; }
+                      h2 { color: #4b5563; font-size: 16px; margin-bottom: 30px; }
+                      .summary { display: flex; gap: 20px; margin-bottom: 30px; }
+                      .card { background: #f3f4f6; padding: 15px; border-radius: 8px; flex: 1; }
+                      .value { font-size: 24px; font-weight: bold; color: #111827; }
+                      .label { font-size: 12px; color: #6b7280; }
+                      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                      th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; }
+                      th { color: #6b7280; font-size: 12px; text-transform: uppercase; }
+                      td { color: #111827; }
+                    </style>
+                  </head>
+                  <body>
+                    <h1>Weekly Report</h1>
+                    <h2>${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}</h2>
+                    <div class="summary">
+                      <div class="card">
+                        <div class="value">${totalHours.toFixed(1)}h</div>
+                        <div class="label">Total Hours</div>
+                      </div>
+                      <div class="card">
+                        <div class="value">${completedTasks}</div>
+                        <div class="label">Completed Tasks</div>
+                      </div>
+                      <div class="card">
+                        <div class="value">${completionRate.toFixed(0)}%</div>
+                        <div class="label">Completion Rate</div>
+                      </div>
+                      <div class="card">
+                        <div class="value">${totalHours >= targetHours ? 'Met' : 'Missed'}</div>
+                        <div class="label">Weekly Target</div>
+                      </div>
+                    </div>
+                    <h3>Task Details</h3>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Task</th>
+                          <th>Hours</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${weeklyTasks.map(task => `
+                          <tr>
+                            <td>${format(new Date(task.date), 'EEE, MMM d')}</td>
+                            <td>${task.title}</td>
+                            <td>${parseFloat(task.hoursSpent || 0).toFixed(1)}h</td>
+                            <td>${task.completed ? 'Complete' : 'Pending'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </body>
+                </html>
+            `;
+
+            const { uri } = await printToFileAsync({ html });
+            const fileName = `Weekly_Report_${format(weekStart, 'MMM_d')}_to_${format(weekEnd, 'd')}.pdf`;
+            const newUri = FileSystem.documentDirectory + fileName;
+            await FileSystem.moveAsync({ from: uri, to: newUri });
+            await shareAsync(newUri, { UTI: '.pdf', mimeType: 'application/pdf' });
+        } catch (error) {
+            console.error('Error exporting data:', error);
+            Alert.alert('Error', `Failed to export data: ${error.message || 'Unknown error'}`);
+        }
     };
 
     const handleRateApp = () => {
@@ -75,7 +362,9 @@ const SettingsTab = () => {
     };
 
     const handleContactSupport = () => {
-        Linking.openURL('mailto:contact@qministries.com');
+        const subject = encodeURIComponent('ManageSelf Support Request');
+        const body = encodeURIComponent('Hi Support Team,\n\n');
+        Linking.openURL(`mailto:contact@qministry.com?subject=${subject}&body=${body}`);
     };
 
     const handleUpgradeToPremium = () => {
@@ -101,6 +390,83 @@ const SettingsTab = () => {
         }
     };
 
+    const handleSecurityAction = async (type) => {
+        setPasscodeType(type);
+        setPasscodeIn('');
+        setNewPasscode('');
+        setConfirmPasscode('');
+
+        // Try biometrics first if enabled
+        if (biometricsEnabled) {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+            if (hasHardware && isEnrolled) {
+                const result = await LocalAuthentication.authenticateAsync({
+                    promptMessage: 'Authenticate to continue',
+                    fallbackLabel: 'Use Passcode',
+                });
+
+                if (result.success) {
+                    if (type === 'change') {
+                        setPasscodeMode('new');
+                        setShowPasscodeModal(true);
+                    } else if (type === 'toggle') {
+                        await setBiometricsEnabled(!biometricsEnabled);
+                        Alert.alert('Success', `Biometric unlock ${!biometricsEnabled ? 'enabled' : 'disabled'}`);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // Fallback to manual passcode
+        setPasscodeMode('verify');
+        setShowPasscodeModal(true);
+    };
+
+    const handlePasscodeSubmit = async () => {
+        if (securityLockoutTime > 0) return;
+
+        if (passcodeMode === 'verify') {
+            if (passcodeIn === vaultPasscode) {
+                setSecurityAttempts(0);
+                if (passcodeType === 'change') {
+                    setPasscodeMode('new');
+                    setPasscodeIn('');
+                } else {
+                    await setBiometricsEnabled(!biometricsEnabled);
+                    setShowPasscodeModal(false);
+                    Alert.alert('Success', `Biometric unlock ${!biometricsEnabled ? 'enabled' : 'disabled'}`);
+                }
+            } else {
+                const newAttempts = securityAttempts + 1;
+                setSecurityAttempts(newAttempts);
+                setPasscodeIn('');
+
+                if (newAttempts >= 3) {
+                    setSecurityLockoutTime(30);
+                    Alert.alert('Security Locked', 'Too many incorrect attempts. Please try again in 30 seconds.');
+                } else {
+                    Alert.alert('Incorrect Passcode', `Try again (${3 - newAttempts} attempts left)`);
+                }
+            }
+        } else {
+            // New passcode mode
+            if (newPasscode.length !== 4) {
+                Alert.alert('Error', 'Passcode must be 4 digits');
+                return;
+            }
+            if (newPasscode === confirmPasscode) {
+                await setVaultPasscode(newPasscode);
+                setShowPasscodeModal(false);
+                Alert.alert('Success', 'Vault passcode updated');
+            } else {
+                Alert.alert('Error', 'Passcodes do not match');
+            }
+        }
+    };
+
     const getSubscriptionStatus = () => {
         if (isLoading) return 'Loading...';
         if (isPremium || hasAccessRenewal) {
@@ -109,47 +475,21 @@ const SettingsTab = () => {
         return 'Free';
     };
 
-    const SettingSection = ({ title, children }) => (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
-            {children}
-        </View>
-    );
-
-    const SettingItem = ({ icon, title, subtitle, rightComponent, onPress }) => (
-        <TouchableOpacity
-            style={[styles.settingItem, darkMode && { backgroundColor: '#2d3748' }]}
-            onPress={onPress}
-            disabled={!onPress}
-        >
-            <View style={styles.settingLeft}>
-                <View style={styles.iconContainer}>
-                    <Ionicons name={icon} size={20} color="#6366f1" />
-                </View>
-                <View style={styles.settingText}>
-                    <Text style={[styles.settingTitle, darkMode && { color: '#f3f4f6' }]}>{title}</Text>
-                    {subtitle && <Text style={[styles.settingSubtitle, darkMode && { color: '#d1d5db' }]}>{subtitle}</Text>}
-                </View>
-            </View>
-            {rightComponent}
-        </TouchableOpacity>
-    );
-
     return (
         <View style={darkMode ? styles.containerDark : styles.container}>
-            {/* Header */}
             <View style={styles.header}>
                 <Ionicons name="settings" size={24} color="white" />
                 <Text style={styles.headerTitle}>Settings</Text>
             </View>
 
             <ScrollView style={styles.content}>
-                {/* Notifications */}
-                <SettingSection title="Notifications">
+                <SettingSection title="Notifications" styles={styles}>
                     <SettingItem
                         icon="notifications-outline"
                         title="Enable Notifications"
                         subtitle="Receive app notifications"
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Switch
                                 value={notificationsEnabled}
@@ -163,6 +503,8 @@ const SettingsTab = () => {
                         icon="alarm-outline"
                         title="Daily Reminder"
                         subtitle="Get reminded to plan your day"
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Switch
                                 value={dailyReminder}
@@ -177,6 +519,8 @@ const SettingsTab = () => {
                         icon="time-outline"
                         title="Task Reminders"
                         subtitle="Reminders for upcoming tasks"
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Switch
                                 value={taskReminders}
@@ -189,30 +533,60 @@ const SettingsTab = () => {
                     />
                 </SettingSection>
 
-                {/* Appearance */}
-                <SettingSection title="Appearance">
+                <SettingSection title="Appearance" styles={styles}>
                     <SettingItem
                         icon="moon-outline"
                         title="Dark Mode"
                         subtitle="Enable dark theme"
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Switch
                                 value={darkMode}
                                 onValueChange={setDarkMode}
                                 trackColor={{ false: '#d1d5db', true: '#a5b4fc' }}
                                 thumbColor={darkMode ? '#6366f1' : '#f3f4f6'}
-
                             />
                         }
                     />
                 </SettingSection>
 
-                {/* Subscription */}
-                <SettingSection title="Subscription">
+                <SettingSection title="Security" styles={styles}>
+                    <SettingItem
+                        icon="key-outline"
+                        title="Change Vault Passcode"
+                        subtitle="Update your 4-digit security code"
+                        onPress={() => handleSecurityAction('change')}
+                        darkMode={darkMode}
+                        styles={styles}
+                        rightComponent={
+                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                        }
+                    />
+                    <SettingItem
+                        icon="finger-print-outline"
+                        title="Biometric Unlock"
+                        subtitle="Use FaceID/Fingerprint for Vault"
+                        darkMode={darkMode}
+                        styles={styles}
+                        rightComponent={
+                            <Switch
+                                value={biometricsEnabled}
+                                onValueChange={() => handleSecurityAction('toggle')}
+                                trackColor={{ false: '#d1d5db', true: '#a5b4fc' }}
+                                thumbColor={biometricsEnabled ? '#6366f1' : '#f3f4f6'}
+                            />
+                        }
+                    />
+                </SettingSection>
+
+                <SettingSection title="Subscription" styles={styles}>
                     <SettingItem
                         icon="star"
                         title="Subscription Status"
                         subtitle={getSubscriptionStatus()}
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             (isPremium || hasAccessRenewal) ? (
                                 <View style={styles.premiumBadge}>
@@ -227,6 +601,8 @@ const SettingsTab = () => {
                             title="Upgrade to Premium"
                             subtitle="Unlock all features"
                             onPress={handleUpgradeToPremium}
+                            darkMode={darkMode}
+                            styles={styles}
                             rightComponent={
                                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                             }
@@ -238,6 +614,8 @@ const SettingsTab = () => {
                             title="Manage Subscription"
                             subtitle="View and manage your subscription"
                             onPress={handleManageSubscription}
+                            darkMode={darkMode}
+                            styles={styles}
                             rightComponent={
                                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                             }
@@ -248,6 +626,8 @@ const SettingsTab = () => {
                         title="Restore Purchases"
                         subtitle="Restore previous purchases"
                         onPress={handleRestorePurchases}
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                         }
@@ -258,6 +638,8 @@ const SettingsTab = () => {
                             title="Test Purchases"
                             subtitle="Development testing tools"
                             onPress={() => setShowPurchaseTest(true)}
+                            darkMode={darkMode}
+                            styles={styles}
                             rightComponent={
                                 <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                             }
@@ -265,29 +647,31 @@ const SettingsTab = () => {
                     )}
                 </SettingSection>
 
-                {/* Timesheet Settings */}
-                <SettingSection title="Timesheet Settings">
+                <SettingSection title="Timesheet Settings" styles={styles}>
                     <SettingItem
                         icon="calendar-outline"
-                        title="Daily Target Hours"
-                        subtitle={`Current: ${targetHours} hours per day`}
+                        title="Weekly Target Hours"
+                        subtitle={`Current: ${targetHours} hours per week`}
                         onPress={() => {
                             setTempTargetHours(targetHours.toString());
                             setShowTargetHoursInput(true);
                         }}
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                         }
                     />
                 </SettingSection>
 
-                {/* Data Management */}
-                <SettingSection title="Data Management">
+                <SettingSection title="Data Management" styles={styles}>
                     <SettingItem
                         icon="download-outline"
                         title="Export Data"
                         subtitle="Download your data"
                         onPress={handleExportData}
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                         }
@@ -297,66 +681,37 @@ const SettingsTab = () => {
                         title="Clear All Data"
                         subtitle="Delete all tasks and entries"
                         onPress={handleClearData}
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Ionicons name="chevron-forward" size={20} color="#ef4444" />
                         }
                     />
                 </SettingSection>
 
-                {/* About */}
-                <SettingSection title="About">
+                <SettingSection title="About" styles={styles}>
                     <SettingItem
                         icon="information-circle-outline"
                         title="App Version"
                         subtitle="1.0.0"
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={null}
-                    />
-                    <SettingItem
-                        icon="star-outline"
-                        title="Rate App"
-                        subtitle="Share your feedback"
-                        onPress={handleRateApp}
-                        rightComponent={
-                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-                        }
                     />
                     <SettingItem
                         icon="mail-outline"
                         title="Contact Support"
-                        subtitle="contact@qministries.com"
+                        subtitle="contact@qministry.com"
                         onPress={handleContactSupport}
-                        rightComponent={
-                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-                        }
-                    />
-                    <SettingItem
-                        icon="document-text-outline"
-                        title="Privacy Policy"
-                        subtitle="View our privacy policy"
-                        onPress={() => Alert.alert('Privacy Policy', 'Privacy policy coming soon')}
-                        rightComponent={
-                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-                        }
-                    />
-                    <SettingItem
-                        icon="shield-checkmark-outline"
-                        title="Terms of Service"
-                        subtitle="View terms and conditions"
-                        onPress={() => Alert.alert('Terms of Service', 'Terms coming soon')}
+                        darkMode={darkMode}
+                        styles={styles}
                         rightComponent={
                             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                         }
                     />
                 </SettingSection>
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>ManageSelf</Text>
-                    <Text style={styles.footerSubtext}>Made by Q's Ministry / BHITS</Text>
-                </View>
             </ScrollView>
 
-            {/* Paywall Modal */}
             <Modal
                 visible={showPaywall}
                 animationType="slide"
@@ -371,46 +726,16 @@ const SettingsTab = () => {
                 />
             </Modal>
 
-            {/* Target Hours Input Modal */}
-            <Modal
+            <TargetHoursModal
                 visible={showTargetHoursInput}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowTargetHoursInput(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Set Daily Target Hours</Text>
-                        <Text style={styles.modalSubtitle}>
-                            Enter your target work hours per day
-                        </Text>
-                        <TextInput
-                            style={styles.modalInput}
-                            value={tempTargetHours}
-                            onChangeText={setTempTargetHours}
-                            keyboardType="decimal-pad"
-                            placeholder="8"
-                            autoFocus
-                        />
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={[styles.modalButton, styles.modalButtonCancel]}
-                                onPress={() => setShowTargetHoursInput(false)}
-                            >
-                                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalButton, styles.modalButtonSave]}
-                                onPress={handleSaveTargetHours}
-                            >
-                                <Text style={styles.modalButtonTextSave}>Save</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
+                onClose={() => setShowTargetHoursInput(false)}
+                onSave={handleSaveTargetHours}
+                value={tempTargetHours}
+                setValue={setTempTargetHours}
+                styles={styles}
+                darkMode={darkMode}
+            />
 
-            {/* Purchase Test Screen Modal (Development Only) */}
             {__DEV__ && (
                 <Modal
                     visible={showPurchaseTest}
@@ -429,6 +754,22 @@ const SettingsTab = () => {
                     </View>
                 </Modal>
             )}
+
+            <PasscodeModal
+                visible={showPasscodeModal}
+                onClose={() => setShowPasscodeModal(false)}
+                onSubmit={handlePasscodeSubmit}
+                mode={passcodeMode}
+                lockoutTime={securityLockoutTime}
+                passcodeIn={passcodeIn}
+                setPasscodeIn={setPasscodeIn}
+                newPasscode={newPasscode}
+                setNewPasscode={setNewPasscode}
+                confirmPasscode={confirmPasscode}
+                setConfirmPasscode={setConfirmPasscode}
+                styles={styles}
+                darkMode={darkMode}
+            />
         </View>
     );
 };
@@ -549,6 +890,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#6b7280',
         marginBottom: 20,
+    },
+    inputLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#374151',
+        marginBottom: 8,
+        marginTop: 12,
     },
     modalInput: {
         borderWidth: 1,

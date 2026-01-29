@@ -6,18 +6,17 @@ import { shareAsync } from 'expo-sharing';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSettings } from '../context/SettingsContext';
-import { darkColors } from '../theme/darkTheme';
-import { Task } from '../types';
 
 interface WeeklyReportProps {
-  tasks: Task[];
+  tasks: any[];
   onBack: () => void;
   selectedDate: Date;
+  employer?: any;
 }
 
-export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyReportProps) {
+export default function WeeklyReport({ tasks, onBack, selectedDate, employer }: WeeklyReportProps) {
   const { darkMode } = useSettings();
-  const colors = darkMode ? darkColors : {
+  const colors = {
     background: '#f8fafc',
     surface: 'white',
     primary: '#6366f1',
@@ -65,7 +64,7 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
   const averageHours = totalHours / 7;
 
   const ProgressBar = ({ value }: { value: number }) => (
-    <View style={styles.progressContainer}>
+    <View style={[styles.progressContainer, darkMode && darkStyles.progressContainer]}>
       <View style={[styles.progressBar, { width: `${Math.min(Math.max(value, 0), 100)}%` }]} />
     </View>
   );
@@ -91,6 +90,14 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
           </head>
           <body>
             <h1>Weekly Report</h1>
+            ${employer ? `
+              <div style="margin-bottom: 20px;">
+                <h2 style="margin-bottom: 5px; color: #111827;">${employer.companyName}</h2>
+                ${employer.address ? `<p style="margin: 0; color: #4b5563;">${employer.address}</p>` : ''}
+                ${employer.ein ? `<p style="margin: 0; color: #4b5563;">EIN: ${employer.ein}</p>` : ''}
+                ${employer.supervisorName ? `<p style="margin: 0; color: #4b5563;">Supervisor: ${employer.supervisorName}</p>` : ''}
+              </div>
+            ` : ''}
             <h2>${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}</h2>
             
             <div class="summary">
@@ -107,7 +114,7 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
                 <div class="label">Completion Rate</div>
               </div>
               <div class="card">
-                <div class="value">${averageHours >= targetHours ? 'Met' : 'Missed'}</div>
+                <div class="value">${totalHours >= targetHours * 7 / 7 ? 'Met' : 'Missed'}</div>
                 <div class="label">Weekly Target</div>
               </div>
             </div>
@@ -154,15 +161,15 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView style={[styles.container, darkMode && darkStyles.container]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
+      <View style={[styles.header, darkMode && darkStyles.header]}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Feather name="arrow-left" size={16} color="#6366f1" />
         </TouchableOpacity>
         <View>
-          <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Weekly Report</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.onSecondary }]}>
+          <Text style={[styles.headerTitle, darkMode && darkStyles.text]}>Weekly Report</Text>
+          <Text style={[styles.headerSubtitle, darkMode && darkStyles.subtext]}>
             {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
           </Text>
         </View>
@@ -173,82 +180,88 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
 
       {/* Summary Cards */}
       <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, darkMode && darkStyles.card]}>
           <View style={styles.summaryIconContainer}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
               <Feather name="clock" size={20} color="#6366f1" />
             </View>
           </View>
           <View>
-            <Text style={[styles.summaryValue, { color: colors.onSurface }]}>{totalHours.toFixed(1)}h</Text>
-            <Text style={[styles.summaryLabel, { color: colors.onSecondary }]}>Total Hours</Text>
+            <Text style={[styles.summaryValue, darkMode && darkStyles.text]}>{totalHours.toFixed(1)}h</Text>
+            <Text style={[styles.summaryLabel, darkMode && darkStyles.subtext]}>Total Hours</Text>
           </View>
         </View>
 
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, darkMode && darkStyles.card]}>
           <View style={styles.summaryIconContainer}>
             <View style={[styles.iconBg, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
               <Feather name="check-circle" size={20} color="#22c55e" />
             </View>
           </View>
           <View>
-            <Text style={[styles.summaryValue, { color: colors.onSurface }]}>{completedTasks}</Text>
-            <Text style={[styles.summaryLabel, { color: colors.onSecondary }]}>Completed</Text>
+            <Text style={[styles.summaryValue, darkMode && darkStyles.text]}>{completedTasks}</Text>
+            <Text style={[styles.summaryLabel, darkMode && darkStyles.subtext]}>Completed</Text>
           </View>
         </View>
       </View>
 
       {/* Progress Overview */}
-      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      <View style={[styles.card, darkMode && darkStyles.card]}>
         <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Weekly Progress</Text>
+          <Text style={[styles.cardTitle, darkMode && darkStyles.text]}>Weekly Progress</Text>
           <View style={styles.trendingContainer}>
-            <Feather name="trending-up" size={16} color="#6b7280" />
-            <Text style={styles.trendingText}>{completionRate.toFixed(0)}% completed</Text>
+            <Feather name="trending-up" size={16} color={darkMode ? '#94a3b8' : '#6b7280'} />
+            <Text style={[styles.trendingText, darkMode && darkStyles.subtext]}>{completionRate.toFixed(0)}% completed</Text>
           </View>
         </View>
 
         <View style={styles.progressSection}>
           <View style={styles.progressLabelRow}>
-            <Text style={[styles.progressLabel, { color: colors.text }]}>Task Completion</Text>
-            <Text style={[styles.progressValue, { color: colors.text }]}>{completedTasks}/{totalTasks} tasks</Text>
+            <Text style={[styles.progressLabel, darkMode && darkStyles.textSecondary]}>Task Completion</Text>
+            <Text style={[styles.progressValue, darkMode && darkStyles.textSecondary]}>{completedTasks}/{totalTasks} tasks</Text>
           </View>
           <ProgressBar value={completionRate} />
         </View>
 
         <View style={styles.progressSection}>
           <View style={styles.progressLabelRow}>
-            <Text style={[styles.progressLabel, { color: colors.text }]}>Daily Average</Text>
-            <Text style={[styles.progressValue, { color: colors.text }]}>{averageHours.toFixed(1)}/{targetHours}h per day</Text>
+            <Text style={[styles.progressLabel, darkMode && darkStyles.textSecondary]}>Daily Average</Text>
+            <Text style={[styles.progressValue, darkMode && darkStyles.textSecondary]}>{averageHours.toFixed(1)}/{targetHours}h per day</Text>
           </View>
           <ProgressBar value={(averageHours / targetHours) * 100} />
         </View>
       </View>
 
       {/* Daily Breakdown */}
-      <View style={[styles.card, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Daily Breakdown</Text>
+      <View style={[styles.card, darkMode && darkStyles.card]}>
+        <Text style={[styles.cardTitle, darkMode && darkStyles.text]}>Daily Breakdown</Text>
         <View style={styles.dailyList}>
           {dailyStats.map((day, index) => (
-            <View key={index} style={[styles.dailyItem, { backgroundColor: colors.background }]}>
+            <View key={index} style={[styles.dailyItem, darkMode && darkStyles.dailyItem]}>
               <View style={styles.dailyLeft}>
                 <View style={styles.dayLabel}>
-                  <Text style={[styles.dayName, { color: colors.onSurface }]}>{format(day.date, 'EEE')}</Text>
-                  <Text style={[styles.dayNumber, { color: colors.subtext }]}>{format(day.date, 'd')}</Text>
+                  <Text style={[styles.dayName, darkMode && darkStyles.text]}>{format(day.date, 'EEE')}</Text>
+                  <Text style={[styles.dayNumber, darkMode && darkStyles.subtext]}>{format(day.date, 'd')}</Text>
                 </View>
                 <View>
-                  <Text style={[styles.dailyHours, { color: colors.onSurface }]}>{day.hours.toFixed(1)} hours</Text>
-                  <Text style={[styles.dailyTasks, { color: colors.subtext }]}>
+                  <Text style={[styles.dailyHours, darkMode && darkStyles.text]}>{day.hours.toFixed(1)} hours</Text>
+                  <Text style={[styles.dailyTasks, darkMode && darkStyles.subtext]}>
                     {day.completed}/{day.tasks} tasks completed
                   </Text>
                 </View>
               </View>
               <View style={styles.dailyRight}>
-                {day.hours > 0 && (
-                  <View style={styles.miniProgressContainer}>
-                    <View style={[styles.miniProgressBar, { width: `${(day.hours / targetHours) * 100}%` }]} />
-                  </View>
-                )}
+                <View style={[styles.miniProgressContainer, darkMode && darkStyles.progressContainer]}>
+                  <View
+                    style={[
+                      styles.miniProgressBar,
+                      {
+                        width: `${day.tasks > 0 ? (day.completed / day.tasks) * 100 : 0}%`,
+                        backgroundColor: day.completed === day.tasks && day.tasks > 0 ? '#22c55e' : '#6366f1'
+                      }
+                    ]}
+                  />
+                </View>
                 {day.completed === day.tasks && day.tasks > 0 && (
                   <Feather name="check-circle" size={16} color="#22c55e" />
                 )}
@@ -259,15 +272,15 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
       </View>
 
       {/* Insights */}
-      <View style={[styles.card, { marginBottom: 40, backgroundColor: colors.surface }]}>
-        <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Insights</Text>
+      <View style={[styles.card, { marginBottom: 40 }, darkMode && darkStyles.card]}>
+        <Text style={[styles.cardTitle, darkMode && darkStyles.text]}>Insights</Text>
         <View style={styles.insightsList}>
           {averageHours >= targetHours && (
             <View style={[styles.insightCard, { backgroundColor: 'rgba(34, 197, 94, 0.1)' }]}>
               <Feather name="trending-up" size={20} color="#22c55e" style={styles.insightIcon} />
               <View style={styles.insightContent}>
                 <Text style={[styles.insightTitle, { color: '#22c55e' }]}>Great productivity!</Text>
-                <Text style={styles.insightText}>
+                <Text style={[styles.insightText, darkMode && { color: '#94a3b8' }]}>
                   You're meeting your daily hour targets this week.
                 </Text>
               </View>
@@ -279,7 +292,7 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
               <Feather name="target" size={20} color="#6366f1" style={styles.insightIcon} />
               <View style={styles.insightContent}>
                 <Text style={[styles.insightTitle, { color: '#6366f1' }]}>Excellent completion rate!</Text>
-                <Text style={styles.insightText}>
+                <Text style={[styles.insightText, darkMode && { color: '#94a3b8' }]}>
                   You completed {completionRate.toFixed(0)}% of your planned tasks.
                 </Text>
               </View>
@@ -291,7 +304,7 @@ export default function WeeklyReport({ tasks, onBack, selectedDate }: WeeklyRepo
               <Feather name="clock" size={20} color="#eab308" style={styles.insightIcon} />
               <View style={styles.insightContent}>
                 <Text style={[styles.insightTitle, { color: '#eab308' }]}>Room for improvement</Text>
-                <Text style={styles.insightText}>
+                <Text style={[styles.insightText, darkMode && { color: '#94a3b8' }]}>
                   Try to increase your daily hours to reach your {targetHours}h weekly target.
                 </Text>
               </View>
@@ -470,7 +483,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   miniProgressContainer: {
-    width: 64,
+    width: 100,
     height: 8,
     backgroundColor: '#e5e7eb',
     borderRadius: 4,
@@ -505,5 +518,34 @@ const styles = StyleSheet.create({
   insightText: {
     fontSize: 12,
     color: '#6b7280',
+  },
+});
+
+const darkStyles = StyleSheet.create({
+  container: {
+    backgroundColor: '#0f172a',
+  },
+  header: {
+    backgroundColor: '#0f172a',
+  },
+  card: {
+    backgroundColor: '#1e293b',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+  },
+  text: {
+    color: '#f1f5f9',
+  },
+  textSecondary: {
+    color: '#cbd5e1',
+  },
+  subtext: {
+    color: '#94a3b8',
+  },
+  dailyItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  progressContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
 });

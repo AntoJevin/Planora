@@ -25,6 +25,14 @@ export const VaultService = {
         );
     },
 
+    updateEntry: async (entry: VaultEntry): Promise<void> => {
+        const db = await getDB();
+        await db.runAsync(
+            `UPDATE vault_entries SET title = ?, username = ?, password = ?, notes = ?, category = ? WHERE id = ?`,
+            [entry.title, entry.username || null, entry.password || null, entry.notes || null, entry.category, entry.id]
+        );
+    },
+
     deleteEntry: async (id: string): Promise<void> => {
         const db = await getDB();
         await db.runAsync('DELETE FROM vault_entries WHERE id = ?', [id]);

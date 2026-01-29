@@ -37,6 +37,14 @@ export const TodoService = {
         await db.runAsync('DELETE FROM todos WHERE id = ?', [id]);
     },
 
+    updateTodo: async (todo: Todo): Promise<void> => {
+        const db = await getDB();
+        await db.runAsync(
+            `UPDATE todos SET title = ?, completed = ?, category = ?, categoryColor = ? WHERE id = ?`,
+            [todo.title, todo.completed ? 1 : 0, todo.category, todo.categoryColor, todo.id]
+        );
+    },
+
     updateTodoOrder: async (todos: Todo[]): Promise<void> => {
         // In a real app with order persistence, we'd update an 'order' column.
         // For now, we'll just rely on createdAt or client-side reordering if needed,

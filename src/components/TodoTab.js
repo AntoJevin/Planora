@@ -17,6 +17,240 @@ import { useSettings } from '../context/SettingsContext';
 import { TodoService } from '../services/TodoService';
 import { darkColors } from '../theme/darkTheme';
 
+const TodoItem = ({ item: todo, drag, isActive, toggleTodo, deleteTodo, editTodo, colors, styles }) => (
+  <View style={[
+    styles.todoItem,
+    { backgroundColor: colors.surface },
+    isActive && styles.todoItemDragging
+  ]}>
+    <TouchableOpacity
+      style={styles.checkbox}
+      onPress={() => toggleTodo(todo.id)}
+    >
+      <Ionicons
+        name={todo.completed ? "checkmark-circle" : "ellipse-outline"}
+        size={24}
+        color={todo.completed ? "#10b981" : "#d1d5db"}
+      />
+    </TouchableOpacity>
+
+    <View style={styles.todoContent}>
+      <Text style={[
+        styles.todoTitle,
+        { color: colors.onSurface },
+        todo.completed && styles.completedTodo
+      ]}>
+        {todo.title}
+      </Text>
+      <View style={styles.todoFooter}>
+        <View style={[
+          styles.categoryBadge,
+          { backgroundColor: todo.categoryColor + '20' }
+        ]}>
+          <Text style={[
+            styles.categoryText,
+            { color: todo.categoryColor }
+          ]}>
+            {todo.category}
+          </Text>
+        </View>
+      </View>
+    </View>
+
+    <TouchableOpacity
+      style={styles.editButton}
+      onPress={() => editTodo(todo)}
+    >
+      <Ionicons name="pencil-outline" size={20} color="#6366f1" />
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.deleteButton}
+      onPress={() => deleteTodo(todo.id)}
+    >
+      <Ionicons name="trash-outline" size={20} color="#ef4444" />
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.dragHandle}
+      onLongPress={drag}
+      delayLongPress={100}
+    >
+      <Ionicons name="reorder-three" size={24} color="#9ca3af" />
+    </TouchableOpacity>
+  </View>
+);
+
+const CategoryFilter = ({ categories, todos, selectedCategory, setSelectedCategory, categoryColors, colors, styles }) => (
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    style={styles.categoryFilter}
+  >
+    <TouchableOpacity
+      style={[
+        styles.categoryChip,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        !selectedCategory && styles.selectedCategoryChip
+      ]}
+      onPress={() => setSelectedCategory(null)}
+    >
+      <Text style={[
+        styles.categoryChipText,
+        !selectedCategory && styles.selectedCategoryChipText
+      ]}>
+        All ({todos.length})
+      </Text>
+    </TouchableOpacity>
+
+    {categories.map((category) => {
+      const count = todos.filter(todo => todo.category === category).length;
+      const color = categoryColors[category] || '#6b7280';
+      return (
+        <TouchableOpacity
+          key={category}
+          style={[
+            styles.categoryChip,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+            selectedCategory === category && styles.selectedCategoryChip
+          ]}
+          onPress={() => setSelectedCategory(category)}
+        >
+          <View style={[
+            styles.categoryColorDot,
+            { backgroundColor: color }
+          ]} />
+          <Text style={[
+            styles.categoryChipText,
+            selectedCategory === category && styles.selectedCategoryChipText
+          ]}>
+            {category} ({count})
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </ScrollView>
+);
+
+const AddTodoModal = ({
+  visible,
+  onClose,
+  addTodo,
+  newTodo,
+  setNewTodo,
+  customCategory,
+  setCustomCategory,
+  categoryColors,
+  colors,
+  styles,
+  darkMode
+}) => (
+  <Modal
+    visible={visible}
+    animationType="slide"
+    presentationStyle="pageSheet"
+  >
+    <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+      <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={onClose}>
+          <Ionicons name="close" size={24} color={darkMode ? "#94a3b8" : "#374151"} />
+        </TouchableOpacity>
+        <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+          {newTodo.id ? 'Edit Task' : 'Add Task'}
+        </Text>
+        <TouchableOpacity onPress={addTodo}>
+          <Text style={styles.saveButton}>Save</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.modalContent}>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Task Title *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+            value={newTodo.title}
+            onChangeText={(text) => setNewTodo({ ...newTodo, title: text })}
+            placeholder="Enter task title"
+            placeholderTextColor={colors.subtext}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {Object.keys(categoryColors).map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryOption,
+                  newTodo.category === category && styles.selectedCategoryOption,
+                  { borderColor: categoryColors[category], backgroundColor: colors.surface }
+                ]}
+                onPress={() => setNewTodo({
+                  ...newTodo,
+                  category,
+                  categoryColor: categoryColors[category]
+                })}
+              >
+                <View style={[
+                  styles.categoryColorIndicator,
+                  { backgroundColor: categoryColors[category] }
+                ]} />
+                <Text style={[
+                  styles.categoryOptionText,
+                  { color: colors.subtext },
+                  newTodo.category === category && styles.selectedCategoryOptionText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {/* Other Category Option */}
+            <TouchableOpacity
+              style={[
+                styles.categoryOption,
+                newTodo.category === 'Other' && styles.selectedCategoryOption,
+                { borderColor: '#6b7280', backgroundColor: colors.surface }
+              ]}
+              onPress={() => setNewTodo({
+                ...newTodo,
+                category: 'Other',
+                categoryColor: '#6b7280'
+              })}
+            >
+              <View style={[
+                styles.categoryColorIndicator,
+                { backgroundColor: '#6b7280' }
+              ]} />
+              <Text style={[
+                styles.categoryOptionText,
+                { color: colors.subtext },
+                newTodo.category === 'Other' && styles.selectedCategoryOptionText
+              ]}>
+                Other
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* Custom Category Input (shown when Other is selected) */}
+        {newTodo.category === 'Other' && (
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Custom Category Name *</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              value={customCategory}
+              onChangeText={setCustomCategory}
+              placeholder="Enter category name"
+              placeholderTextColor={colors.subtext}
+            />
+          </View>
+        )}
+      </View>
+    </View>
+  </Modal>
+);
+
 const TodoTab = () => {
   const { darkMode } = useSettings();
   const colors = darkMode ? darkColors : {
@@ -52,6 +286,7 @@ const TodoTab = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [customCategory, setCustomCategory] = useState("");
+  const [editingTodo, setEditingTodo] = useState(null);
   const [newTodo, setNewTodo] = useState({
     title: '',
     category: 'Work',
@@ -122,242 +357,58 @@ const TodoTab = () => {
     const finalCategory = newTodo.category === 'Other' ? customCategory : newTodo.category;
     const finalColor = newTodo.category === 'Other' ? '#6b7280' : newTodo.categoryColor;
 
-    const todo = {
-      ...newTodo,
-      id: Date.now().toString(),
-      category: finalCategory,
-      categoryColor: finalColor,
-      completed: false,
-    };
-
     try {
-      await TodoService.addTodo(todo);
+      if (newTodo.id) {
+        // Edit existing todo
+        const todoToUpdate = {
+          ...newTodo,
+          category: finalCategory,
+          categoryColor: finalColor,
+        };
+        await TodoService.updateTodo(todoToUpdate);
+      } else {
+        // Add new todo
+        const todo = {
+          ...newTodo,
+          id: Date.now().toString(),
+          category: finalCategory,
+          categoryColor: finalColor,
+          completed: false,
+        };
+        await TodoService.addTodo(todo);
+      }
+
       await loadTodos();
-      setNewTodo({
-        title: '',
-        category: 'Work',
-        categoryColor: '#3b82f6',
-      });
-      setCustomCategory('');
-      setShowAddDialog(false);
+      closeModal();
     } catch (error) {
-      console.error('Error adding todo:', error);
-      Alert.alert('Error', 'Failed to add todo');
+      console.error('Error saving todo:', error);
+      Alert.alert('Error', 'Failed to save todo');
     }
   };
 
-  const TodoItem = ({ item: todo, drag, isActive }) => (
-    <View style={[
-      styles.todoItem,
-      { backgroundColor: colors.surface },
-      isActive && styles.todoItemDragging
-    ]}>
-      <TouchableOpacity
-        style={styles.checkbox}
-        onPress={() => toggleTodo(todo.id)}
-      >
-        <Ionicons
-          name={todo.completed ? "checkmark-circle" : "ellipse-outline"}
-          size={24}
-          color={todo.completed ? "#10b981" : "#d1d5db"}
-        />
-      </TouchableOpacity>
+  const editTodo = (todo) => {
+    setEditingTodo(todo);
+    setNewTodo(todo);
+    if (!Object.values(categoryColors).includes(todo.categoryColor) && todo.categoryColor !== '#6b7280') {
+      // It's a custom category
+      setCustomCategory(todo.category);
+    }
+    setShowAddDialog(true);
+  };
 
-      <View style={styles.todoContent}>
-        <Text style={[
-          styles.todoTitle,
-          { color: colors.onSurface },
-          todo.completed && styles.completedTodo
-        ]}>
-          {todo.title}
-        </Text>
-        <View style={styles.todoFooter}>
-          <View style={[
-            styles.categoryBadge,
-            { backgroundColor: todo.categoryColor + '20' }
-          ]}>
-            <Text style={[
-              styles.categoryText,
-              { color: todo.categoryColor }
-            ]}>
-              {todo.category}
-            </Text>
-          </View>
-        </View>
-      </View>
+  const closeModal = () => {
+    setNewTodo({
+      title: '',
+      category: 'Work',
+      categoryColor: '#3b82f6',
+    });
+    setCustomCategory('');
+    setEditingTodo(null);
+    setShowAddDialog(false);
+  };
 
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => deleteTodo(todo.id)}
-      >
-        <Ionicons name="trash-outline" size={20} color="#ef4444" />
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.dragHandle}
-        onLongPress={drag}
-        delayLongPress={100}
-      >
-        <Ionicons name="reorder-three" size={24} color="#9ca3af" />
-      </TouchableOpacity>
-    </View>
-  );
 
-  const CategoryFilter = () => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.categoryFilter}
-    >
-      <TouchableOpacity
-        style={[
-          styles.categoryChip,
-          { backgroundColor: colors.surface, borderColor: colors.border },
-          !selectedCategory && styles.selectedCategoryChip
-        ]}
-        onPress={() => setSelectedCategory(null)}
-      >
-        <Text style={[
-          styles.categoryChipText,
-          !selectedCategory && styles.selectedCategoryChipText
-        ]}>
-          All ({todos.length})
-        </Text>
-      </TouchableOpacity>
-
-      {categories.map((category) => {
-        const count = todos.filter(todo => todo.category === category).length;
-        const color = categoryColors[category] || '#6b7280';
-        return (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryChip,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-              selectedCategory === category && styles.selectedCategoryChip
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <View style={[
-              styles.categoryColorDot,
-              { backgroundColor: color }
-            ]} />
-            <Text style={[
-              styles.categoryChipText,
-              selectedCategory === category && styles.selectedCategoryChipText
-            ]}>
-              {category} ({count})
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
-  );
-
-  const AddTodoModal = () => (
-    <Modal
-      visible={showAddDialog}
-      animationType="slide"
-      presentationStyle="pageSheet"
-    >
-      <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
-        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => setShowAddDialog(false)}>
-            <Ionicons name="close" size={24} color="#374151" />
-          </TouchableOpacity>
-          <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Add Task</Text>
-          <TouchableOpacity onPress={addTodo}>
-            <Text style={styles.saveButton}>Save</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.modalContent}>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Task Title *</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              value={newTodo.title}
-              onChangeText={(text) => setNewTodo({ ...newTodo, title: text })}
-              placeholder="Enter task title"
-              placeholderTextColor={colors.subtext}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {Object.keys(categoryColors).map((category) => (
-                <TouchableOpacity
-                  key={category}
-                  style={[
-                    styles.categoryOption,
-                    newTodo.category === category && styles.selectedCategoryOption,
-                    { borderColor: categoryColors[category], backgroundColor: colors.surface }
-                  ]}
-                  onPress={() => setNewTodo({
-                    ...newTodo,
-                    category,
-                    categoryColor: categoryColors[category]
-                  })}
-                >
-                  <View style={[
-                    styles.categoryColorIndicator,
-                    { backgroundColor: categoryColors[category] }
-                  ]} />
-                  <Text style={[
-                    styles.categoryOptionText,
-                    { color: colors.subtext },
-                    newTodo.category === category && styles.selectedCategoryOptionText
-                  ]}>
-                    {category}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              {/* Other Category Option */}
-              <TouchableOpacity
-                style={[
-                  styles.categoryOption,
-                  newTodo.category === 'Other' && styles.selectedCategoryOption,
-                  { borderColor: '#6b7280', backgroundColor: colors.surface }
-                ]}
-                onPress={() => setNewTodo({
-                  ...newTodo,
-                  category: 'Other',
-                  categoryColor: '#6b7280'
-                })}
-              >
-                <View style={[
-                  styles.categoryColorIndicator,
-                  { backgroundColor: '#6b7280' }
-                ]} />
-                <Text style={[
-                  styles.categoryOptionText,
-                  { color: colors.subtext },
-                  newTodo.category === 'Other' && styles.selectedCategoryOptionText
-                ]}>
-                  Other
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-
-          {/* Custom Category Input (shown when Other is selected) */}
-          {newTodo.category === 'Other' && (
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.subtext }]}>Custom Category Name *</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-                value={customCategory}
-                onChangeText={setCustomCategory}
-                placeholder="Enter category name"
-                placeholderTextColor={colors.subtext}
-              />
-            </View>
-          )}
-        </View>
-      </View>
-    </Modal>
-  );
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -374,7 +425,16 @@ const TodoTab = () => {
         </View>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => setShowAddDialog(true)}
+          onPress={() => {
+            setEditingTodo(null);
+            setNewTodo({
+              title: '',
+              category: 'Work',
+              categoryColor: '#3b82f6',
+            });
+            setCustomCategory('');
+            setShowAddDialog(true);
+          }}
         >
           <Ionicons name="add" size={16} color="white" />
           <Text style={styles.addText}>Add</Text>
@@ -396,7 +456,15 @@ const TodoTab = () => {
           </View>
 
           {/* Category Filter */}
-          <CategoryFilter />
+          <CategoryFilter
+            categories={categories}
+            todos={todos}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            categoryColors={categoryColors}
+            colors={colors}
+            styles={styles}
+          />
 
           {/* Empty State */}
           <View style={[styles.todosContainer, { backgroundColor: colors.surface }]}>
@@ -429,7 +497,16 @@ const TodoTab = () => {
           }}
           keyExtractor={(item) => item.id}
           renderItem={({ item, drag, isActive }) => (
-            <TodoItem item={item} drag={drag} isActive={isActive} />
+            <TodoItem
+              item={item}
+              drag={drag}
+              isActive={isActive}
+              toggleTodo={toggleTodo}
+              deleteTodo={deleteTodo}
+              editTodo={editTodo}
+              colors={colors}
+              styles={styles}
+            />
           )}
           ListHeaderComponent={
             <View style={styles.content}>
@@ -446,14 +523,34 @@ const TodoTab = () => {
               </View>
 
               {/* Category Filter */}
-              <CategoryFilter />
+              <CategoryFilter
+                categories={categories}
+                todos={todos}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                categoryColors={categoryColors}
+                colors={colors}
+                styles={styles}
+              />
             </View>
           }
           contentContainerStyle={styles.todosListContainer}
         />
       )}
 
-      <AddTodoModal />
+      <AddTodoModal
+        visible={showAddDialog}
+        onClose={closeModal}
+        addTodo={addTodo}
+        newTodo={newTodo}
+        setNewTodo={setNewTodo}
+        customCategory={customCategory}
+        setCustomCategory={setCustomCategory}
+        categoryColors={categoryColors}
+        colors={colors}
+        styles={styles}
+        darkMode={darkMode}
+      />
     </GestureHandlerRootView>
   );
 };
@@ -641,6 +738,10 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+  },
+  editButton: {
+    padding: 8,
+    marginRight: 4,
   },
   dragHandle: {
     padding: 8,
