@@ -44,7 +44,7 @@ export default function DayPlannerTab() {
         // I'll just leave it for now.
 
         try {
-            await notificationService.scheduleTaskReminder(newTask.name, newTask.date);
+            await notificationService.scheduleTaskReminder(newTask.name || newTask.title || 'Task', new Date(newTask.date));
         } catch (error) {
             console.error('Failed to schedule notification:', error);
         }

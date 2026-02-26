@@ -20,10 +20,13 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({ onDismiss, onPurchaseComp
         switch (result) {
             case PAYWALL_RESULT.PURCHASED:
             case PAYWALL_RESULT.RESTORED:
-                console.log('✅ Purchase/Restore successful');
+                console.log('✅ Purchase/Restore successful, refreshing info...');
                 setIsLoading(true);
                 await refreshCustomerInfo();
                 setIsLoading(false);
+
+                // Call the completion handlers immediately so parent components can react
+                onPurchaseCompleted?.();
 
                 Alert.alert(
                     'Success!',
@@ -32,7 +35,6 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({ onDismiss, onPurchaseComp
                         {
                             text: 'OK',
                             onPress: () => {
-                                onPurchaseCompleted?.();
                                 onDismiss?.();
                             },
                         },
@@ -47,7 +49,11 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({ onDismiss, onPurchaseComp
 
             case PAYWALL_RESULT.ERROR:
                 console.log('Paywall error occurred');
-                Alert.alert('Error', 'Something went wrong. Please try again.');
+                Alert.alert(
+                    'Purchase Error',
+                    'We could not complete your request. Please check your internet connection or App Store account and try again.',
+                    [{ text: 'OK' }]
+                );
                 break;
 
             case PAYWALL_RESULT.NOT_PRESENTED:

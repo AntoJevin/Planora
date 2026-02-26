@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases, {
     CustomerInfo,
     LOG_LEVEL,
@@ -5,6 +6,10 @@ import Purchases, {
     PurchasesPackage,
 } from 'react-native-purchases';
 import { REVENUECAT_CONFIG } from '../config/revenuecat';
+
+const INITIAL_LAUNCH_DATE_KEY = 'initial_launch_date';
+const PURCHASED_DAYS_KEY = 'purchased_subscription_days';
+const TRIAL_DAYS = 365;
 
 /**
  * RevenueCat Purchase Service
@@ -34,6 +39,9 @@ class PurchaseService {
         }
 
         try {
+            // Track initial launch date for trial
+            await this.trackInitialLaunch();
+
             // Enable debug logs in development
             if (__DEV__) {
                 Purchases.setLogLevel(LOG_LEVEL.DEBUG);
@@ -49,6 +57,63 @@ class PurchaseService {
         } catch (error) {
             console.error('❌ Error configuring RevenueCat:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Track the first time the app was opened
+     */
+    private async trackInitialLaunch(): Promise<void> {
+        try {
+            const storedDate = await AsyncStorage.getItem(INITIAL_LAUNCH_DATE_KEY);
+            if (!storedDate) {
+                const now = new Date().toISOString();
+                await AsyncStorage.setItem(INITIAL_LAUNCH_DATE_KEY, now);
+                console.log('🚀 Initial launch date set:', now);
+            }
+        } catch (error) {
+            console.error('Error tracking initial launch:', error);
+        }
+    }
+
+    /**
+     * Get total bonus days purchased
+     */
+    private async getPurchasedDays(): Promise<number> {
+        try {
+            const stored = await AsyncStorage.getItem(PURCHASED_DAYS_KEY);
+            return stored ? parseInt(stored, 10) : 0;
+        } catch (error) {
+            return 0;
+        }
+    }
+
+    /**
+     * Increment purchased days
+     */
+    private async addPurchasedDays(days: number): Promise<void> {
+        try {
+            const current = await this.getPurchasedDays();
+            await AsyncStorage.setItem(PURCHASED_DAYS_KEY, (current + days).toString());
+            console.log(`✅ Stored bonus days incremented: ${current} -> ${current + days}`);
+        } catch (error) {
+            console.error('Error adding purchased days:', error);
+        }
+    }
+
+    /**
+     * Get the date when the initial trial expires
+     */
+    async getTrialExpirationDate(): Promise<Date> {
+        try {
+            const storedDate = await AsyncStorage.getItem(INITIAL_LAUNCH_DATE_KEY);
+            const launchDate = storedDate ? new Date(storedDate) : new Date();
+            const expirationDate = new Date(launchDate);
+            expirationDate.setDate(expirationDate.getDate() + TRIAL_DAYS);
+            return expirationDate;
+        } catch (error) {
+            console.error('Error getting trial expiration:', error);
+            return new Date(); // Fallback to now (expired) if error
         }
     }
 
@@ -87,6 +152,8 @@ class PurchaseService {
     async hasAccessRenewal(): Promise<boolean> {
         return this.hasEntitlement(REVENUECAT_CONFIG.entitlements.ACCESS_RENEWAL);
     }
+
+
 
     /**
      * Check if user is a premium subscriber (has any active entitlement)
@@ -128,6 +195,13 @@ class PurchaseService {
             const { customerInfo, productIdentifier } = await Purchases.purchasePackage(
                 packageToPurchase
             );
+
+            // Increment purchased days (stacking logic)
+            await this.addPurchasedDays(TRIAL_DAYS);
+
+            // Also reset trial launch date to today for safety
+            await AsyncStorage.setItem(INITIAL_LAUNCH_DATE_KEY, new Date().toISOString());
+
             console.log('✅ Purchase successful:', productIdentifier);
             return { customerInfo, productIdentifier };
         } catch (error: any) {
@@ -147,6 +221,10 @@ class PurchaseService {
     async restorePurchases(): Promise<CustomerInfo> {
         try {
             const customerInfo = await Purchases.restorePurchases();
+
+            // Also reset trial launch date to today for safety
+            await AsyncStorage.setItem(INITIAL_LAUNCH_DATE_KEY, new Date().toISOString());
+
             console.log('✅ Purchases restored successfully');
             return customerInfo;
         } catch (error) {
@@ -192,16 +270,41 @@ class PurchaseService {
                 REVENUECAT_CONFIG.entitlements.ACCESS_RENEWAL
             ];
 
+            let revenueCatExpiry: Date | null = null;
             if (entitlement && entitlement.expirationDate) {
-                return new Date(entitlement.expirationDate);
+                revenueCatExpiry = new Date(entitlement.expirationDate);
             }
 
-            return null;
+            const trialExpiry = await this.getTrialExpirationDate();
+
+            // Add any bonus days purchased
+            const bonusDays = await this.getPurchasedDays();
+            const finalLocalExpiry = new Date(trialExpiry);
+            finalLocalExpiry.setDate(finalLocalExpiry.getDate() + bonusDays);
+
+            // Total access is whichever is later
+            if (!revenueCatExpiry) return finalLocalExpiry;
+            return revenueCatExpiry > finalLocalExpiry ? revenueCatExpiry : finalLocalExpiry;
         } catch (error) {
             console.error('Error getting expiration date:', error);
             return null;
         }
     }
+
+    /**
+     * Calculate remaining active days
+     */
+    async getDaysRemaining(): Promise<number> {
+        const expiry = await this.getExpirationDate();
+        if (!expiry) return 0;
+
+        const now = new Date();
+        const diffTime = expiry.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+    }
+
+
 }
 
 export default PurchaseService.getInstance();

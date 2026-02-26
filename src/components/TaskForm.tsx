@@ -34,7 +34,8 @@ export default function TaskForm({ selectedDate, onSave, onBack, editingTask }: 
 
     const onSubmit = (data: TaskFormData) => {
         onSave({
-            date: selectedDate,
+            date: selectedDate.toISOString(),
+            title: data.name,
             name: data.name,
             hours: data.hours,
             completed: data.completed,

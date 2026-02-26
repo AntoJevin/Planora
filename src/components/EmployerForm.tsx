@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { FileService } from '../services/FileService';
 import { Employer } from '../types/employer';
 
 interface EmployerFormProps {
@@ -66,7 +67,8 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
         });
 
         if (!result.canceled && result.assets[0]) {
-            setFormData({ ...formData, logoUri: result.assets[0].uri });
+            const permanentUri = await FileService.saveImageToPermanentStorage(result.assets[0].uri, 'logo');
+            setFormData({ ...formData, logoUri: permanentUri });
         }
     };
 
@@ -103,11 +105,19 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
         >
             <View style={[styles.container, darkMode && { backgroundColor: '#0f172a' }]}>
                 <View style={[styles.header, darkMode && { borderBottomColor: '#1e293b' }]}>
-                    <TouchableOpacity onPress={onCancel}>
+                    <TouchableOpacity
+                        onPress={onCancel}
+                        style={styles.headerIconButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
                         <Ionicons name="close" size={24} color={darkMode ? "#94a3b8" : "#374151"} />
                     </TouchableOpacity>
                     <Text style={[styles.title, darkMode && { color: '#f1f5f9' }]}>Employer Details</Text>
-                    <TouchableOpacity onPress={handleSave}>
+                    <TouchableOpacity
+                        onPress={handleSave}
+                        style={styles.headerTextButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
                         <Text style={styles.saveButton}>Save</Text>
                     </TouchableOpacity>
                 </View>
@@ -182,9 +192,9 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
                         />
                     </View>
 
-                    {/* Supervisor Name */}
+                    {/* Supervisor */}
                     <View style={styles.inputGroup}>
-                        <Text style={[styles.label, darkMode && { color: '#94a3b8' }]}>Supervisor Name</Text>
+                        <Text style={[styles.label, darkMode && { color: '#94a3b8' }]}>Supervisor</Text>
                         <TextInput
                             style={[styles.input, darkMode && { backgroundColor: '#1e293b', borderColor: '#334155', color: '#f1f5f9' }]}
                             value={formData.supervisorName}
@@ -208,11 +218,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 50 : 20,
-        paddingBottom: 20,
+        paddingHorizontal: 16,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40, // Increased for Android status bar
+        paddingBottom: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#e5e7eb',
+    },
+    headerIconButton: {
+        padding: 4,
+    },
+    headerTextButton: {
+        paddingVertical: 4,
+        paddingHorizontal: 8,
     },
     title: {
         fontSize: 18,

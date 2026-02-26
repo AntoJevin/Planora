@@ -24,7 +24,7 @@ export default function TaskCalendar({ tasks, onDateSelect, onViewReports, selec
     };
 
     const getTotalHoursForDate = (date: Date) => {
-        return getTasksForDate(date).reduce((total, task) => total + task.hours, 0);
+        return getTasksForDate(date).reduce((total, task) => total + (task.hours || 0), 0);
     };
 
     const customDatesStyles = tasks.map(task => ({

@@ -15,6 +15,7 @@ import {
 import CalendarPicker from 'react-native-calendar-picker';
 import { useSettings } from '../context/SettingsContext';
 import { EmployerService } from '../services/EmployerService';
+import { ProfileService } from '../services/ProfileService';
 import { TaskService } from '../services/TaskService';
 import { darkColors } from '../theme/darkTheme';
 import EmployerForm from './EmployerForm';
@@ -278,6 +279,7 @@ const TimesheetTab = () => {
   });
 
   const [currentEmployer, setCurrentEmployer] = useState(null);
+  const [currentProfile, setCurrentProfile] = useState(null);
   const [showEmployerForm, setShowEmployerForm] = useState(false);
 
 
@@ -285,6 +287,7 @@ const TimesheetTab = () => {
     useCallback(() => {
       loadTasks();
       loadEmployer();
+      loadProfile();
     }, [])
   );
 
@@ -297,6 +300,15 @@ const TimesheetTab = () => {
       }
     } catch (error) {
       console.error('Error loading employer:', error);
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const profile = await ProfileService.getProfile();
+      setCurrentProfile(profile);
+    } catch (error) {
+      console.error('Error loading profile:', error);
     }
   };
 
@@ -570,6 +582,7 @@ const TimesheetTab = () => {
         onBack={() => setShowReports(false)}
         selectedDate={selectedDate}
         employer={currentEmployer}
+        employee={currentProfile}
       />
     ) : (
       <MonthlyReport
@@ -577,6 +590,7 @@ const TimesheetTab = () => {
         onBack={() => setShowReports(false)}
         selectedDate={selectedDate}
         employer={currentEmployer}
+        employee={currentProfile}
       />
     );
   }

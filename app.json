@@ -5,19 +5,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tempexpoapp",
+    "scheme": "manageself",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.antojevin.manageself",
+      "bundleIdentifier": "com.qsministry.manageself",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use FaceID for secure vault access."
       }
     },
     "android": {
-      "package": "com.antojevin.manageself",
+      "package": "com.qsministry.manageself",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

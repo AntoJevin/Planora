@@ -9,6 +9,7 @@ import "./global.css";
 
 import ProfileTab from './src/components/ProfileTab';
 import SettingsTab from './src/components/SettingsTab';
+import SubscriptionGuard from './src/components/SubscriptionGuard';
 import TimesheetTab from './src/components/TimesheetTab';
 import TodoTab from './src/components/TodoTab';
 import VaultTab from './src/components/VaultTab';
@@ -99,7 +100,9 @@ export default function App() {
         <SettingsProvider>
             <PurchaseProvider>
                 <SafeAreaProvider>
-                    <MainNavigator />
+                    <SubscriptionGuard>
+                        <MainNavigator />
+                    </SubscriptionGuard>
                     <StatusBar style="auto" />
                 </SafeAreaProvider>
             </PurchaseProvider>

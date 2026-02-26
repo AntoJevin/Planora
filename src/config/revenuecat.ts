@@ -1,7 +1,7 @@
 // RevenueCat Configuration
 export const REVENUECAT_CONFIG = {
     // API Keys
-    apiKey: 'test_cLEVKThXcNvMlIKCPNOmxBPBUla',
+    apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || '',
 
     // Entitlements
     entitlements: {

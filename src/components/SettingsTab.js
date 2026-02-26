@@ -6,6 +6,7 @@ import { printToFileAsync } from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Linking,
     Modal,
@@ -23,7 +24,6 @@ import { useSettings } from '../context/SettingsContext';
 import { clearAllData } from '../database/db';
 import { TaskService } from '../services/TaskService';
 import PaywallScreen from './PaywallScreen';
-import PurchaseTestScreen from './PurchaseTestScreen';
 
 const SettingSection = ({ title, children, styles }) => (
     <View style={styles.section}>
@@ -199,15 +199,22 @@ const SettingsTab = () => {
         biometricsEnabled,
         setBiometricsEnabled
     } = useSettings();
-    const { isPremium, hasAccessRenewal, customerInfo, restorePurchases, isLoading } = usePurchase();
+    const {
+        isPremium,
+        hasAccessRenewal,
+        daysRemaining,
+        customerInfo,
+        restorePurchases,
+        isLoading
+    } = usePurchase();
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [dailyReminder, setDailyReminder] = useState(true);
     const [taskReminders, setTaskReminders] = useState(true);
     const [showPaywall, setShowPaywall] = useState(false);
-    const [showPurchaseTest, setShowPurchaseTest] = useState(false);
 
     const [showTargetHoursInput, setShowTargetHoursInput] = useState(false);
     const [tempTargetHours, setTempTargetHours] = useState(targetHours.toString());
+    const [isRestoring, setIsRestoring] = useState(false);
 
     // Security states
     const [showPasscodeModal, setShowPasscodeModal] = useState(false);
@@ -373,10 +380,13 @@ const SettingsTab = () => {
 
     const handleRestorePurchases = async () => {
         try {
+            setIsRestoring(true);
             await restorePurchases();
             Alert.alert('Success', 'Your purchases have been restored!');
         } catch (error) {
             Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        } finally {
+            setIsRestoring(false);
         }
     };
 
@@ -469,10 +479,10 @@ const SettingsTab = () => {
 
     const getSubscriptionStatus = () => {
         if (isLoading) return 'Loading...';
-        if (isPremium || hasAccessRenewal) {
-            return 'Premium Active';
+        if (daysRemaining > 0) {
+            return `Active (${daysRemaining} days left)`;
         }
-        return 'Free';
+        return 'Expired';
     };
 
     return (
@@ -608,6 +618,17 @@ const SettingsTab = () => {
                             }
                         />
                     )}
+                    <SettingItem
+                        icon="card-outline"
+                        title="Subscription Plans"
+                        subtitle="View and manage available plans"
+                        onPress={handleUpgradeToPremium}
+                        darkMode={darkMode}
+                        styles={styles}
+                        rightComponent={
+                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                        }
+                    />
                     {(isPremium || hasAccessRenewal) && (
                         <SettingItem
                             icon="settings-outline"
@@ -624,27 +645,18 @@ const SettingsTab = () => {
                     <SettingItem
                         icon="refresh-outline"
                         title="Restore Purchases"
-                        subtitle="Restore previous purchases"
-                        onPress={handleRestorePurchases}
+                        subtitle={isRestoring ? "Restoring..." : "Recover your premium access if you've reinstalled or switched devices"}
+                        onPress={isRestoring ? null : handleRestorePurchases}
                         darkMode={darkMode}
                         styles={styles}
                         rightComponent={
-                            <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                            isRestoring ? (
+                                <ActivityIndicator size="small" color="#6366f1" />
+                            ) : (
+                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+                            )
                         }
                     />
-                    {__DEV__ && (
-                        <SettingItem
-                            icon="flask"
-                            title="Test Purchases"
-                            subtitle="Development testing tools"
-                            onPress={() => setShowPurchaseTest(true)}
-                            darkMode={darkMode}
-                            styles={styles}
-                            rightComponent={
-                                <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
-                            }
-                        />
-                    )}
                 </SettingSection>
 
                 <SettingSection title="Timesheet Settings" styles={styles}>
@@ -736,24 +748,7 @@ const SettingsTab = () => {
                 darkMode={darkMode}
             />
 
-            {__DEV__ && (
-                <Modal
-                    visible={showPurchaseTest}
-                    animationType="slide"
-                    presentationStyle="fullScreen"
-                    onRequestClose={() => setShowPurchaseTest(false)}
-                >
-                    <View style={{ flex: 1 }}>
-                        <View style={styles.header}>
-                            <TouchableOpacity onPress={() => setShowPurchaseTest(false)}>
-                                <Ionicons name="close" size={24} color="white" />
-                            </TouchableOpacity>
-                            <Text style={styles.headerTitle}>Purchase Testing</Text>
-                        </View>
-                        <PurchaseTestScreen />
-                    </View>
-                </Modal>
-            )}
+
 
             <PasscodeModal
                 visible={showPasscodeModal}

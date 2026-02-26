@@ -8,6 +8,8 @@ interface PurchaseContextType {
     offerings: PurchasesOfferings | null;
     isPremium: boolean;
     hasAccessRenewal: boolean;
+    expirationDate: Date | null;
+    daysRemaining: number;
     isLoading: boolean;
     error: string | null;
 
@@ -27,6 +29,8 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
     const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
     const [isPremium, setIsPremium] = useState<boolean>(false);
     const [hasAccessRenewal, setHasAccessRenewal] = useState<boolean>(false);
+    const [expirationDate, setExpirationDate] = useState<Date | null>(null);
+    const [daysRemaining, setDaysRemaining] = useState<number>(0);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +48,12 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
 
             const accessRenewal = await PurchaseService.hasAccessRenewal();
             setHasAccessRenewal(accessRenewal);
+
+            const expiry = await PurchaseService.getExpirationDate();
+            setExpirationDate(expiry);
+
+            const days = await PurchaseService.getDaysRemaining();
+            setDaysRemaining(days);
         } catch (err: any) {
             console.error('Error refreshing customer info:', err);
             setError(err.message || 'Failed to load subscription info');
@@ -78,6 +88,8 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
         }
     };
 
+
+
     // Initialize on mount
     useEffect(() => {
         const initialize = async () => {
@@ -93,6 +105,8 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
         offerings,
         isPremium,
         hasAccessRenewal,
+        expirationDate,
+        daysRemaining,
         isLoading,
         error,
         refreshCustomerInfo,

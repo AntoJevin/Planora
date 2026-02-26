@@ -1,50 +1,67 @@
-# Welcome to your Expo app 👋
+# ManageSelf
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**ManageSelf** is a comprehensive productivity application built with React Native and Expo, designed to help you track your work hours, manage tasks, and securely store sensitive information.
 
-## Get started
+## 🚀 Features
 
-1. Install dependencies
+### 📅 Timesheet Management
+- **Track Work Hours**: Log your daily tasks with precise punch-in and punch-out times.
+- **Employer Details**: Manage multiple employer profiles with contact information and logos.
+- **Weekly/Monthly Reports**: Generate professional PDF reports of your work summary and task details.
+- **Target Tracking**: Set weekly target hours and track your progress against them.
 
+### ✅ Todo & Planning
+- **Daily Planner**: Plan your day with a focused daily view.
+- **Task Organization**: Categorize todos to stay organized across different projects.
+- **Notifications**: Receive reminders to plan your day and upcoming tasks.
+
+### 🔐 Secure Vault
+- **Encrypted Storage**: Securely store passwords, usernames, and sensitive notes.
+- **Biometric Security**: Protect your vault with FaceID or Fingerprint unlock.
+- **Vault Passcode**: Secondary 4-digit security code for an extra layer of protection.
+
+### ⭐ Premium Features
+- **Subscription-Based Access**: Specialized features unlocked through flexible subscription plans.
+- **In-App Purchases**: Seamless upgrade flow powered by RevenueCat.
+- **Subscription Management**: Easily manage your premium status via the integrated Customer Center.
+
+## 🛠️ Technology Stack
+
+- **Framework**: React Native with Expo (SDK 54)
+- **Navigation**: Expo Router (File-based routing)
+- **Database**: Local SQLite storage via `expo-sqlite`
+- **Payments**: RevenueCat SDK for iOS & Android subscriptions
+- **Styling**: NativeWind (Tailwind CSS for React Native) & Vanilla CSS
+- **Authentication**: `expo-local-authentication` for biometrics
+
+## ⚙️ Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/)
+- [Expo Go](https://expo.dev/go) app on your mobile device
+- [iOS Simulator](https://developer.apple.com/xcode/) or [Android Emulator](https://developer.android.com/studio/run/managing-avds)
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
    ```bash
    npm install
    ```
-
-2. Start the app
-
+3. Start the development server:
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## 📂 Project Structure
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- `src/components`: UI components and screen tabs.
+- `src/context`: Global state management for settings and purchases.
+- `src/database`: SQLite schema definitions and database logic.
+- `src/services`: Business logic and data access layers.
+- `src/types`: TypeScript interface definitions.
+- `assets/images`: App icons, splash screens, and image assets.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+Developed for internal release by **Q's Ministry**.

@@ -14,6 +14,7 @@ import {
     View
 } from 'react-native';
 import { useSettings } from '../context/SettingsContext';
+import { FileService } from '../services/FileService';
 import { ProfileService } from '../services/ProfileService';
 import { darkColors } from '../theme/darkTheme';
 import { UserProfile } from '../types/userProfile';
@@ -89,7 +90,8 @@ export default function ProfileTab() {
         });
 
         if (!result.canceled) {
-            setFormData({ ...formData, profilePictureUri: result.assets[0].uri });
+            const permanentUri = await FileService.saveImageToPermanentStorage(result.assets[0].uri, 'profile');
+            setFormData({ ...formData, profilePictureUri: permanentUri });
         }
     };
 
