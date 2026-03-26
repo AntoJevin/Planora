@@ -11,7 +11,8 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    KeyboardAvoidingView
 } from 'react-native';
 import { FileService } from '../services/FileService';
 import { Employer } from '../types/employer';
@@ -122,7 +123,8 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
                     </TouchableOpacity>
                 </View>
 
-                <ScrollView style={styles.content}>
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                    <ScrollView style={styles.content}>
                     {/* Company Logo */}
                     <View style={styles.logoSection}>
                         <Text style={[styles.label, darkMode && { color: '#94a3b8' }]}>Company Logo</Text>
@@ -203,7 +205,8 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
                             placeholderTextColor={darkMode ? "#64748b" : "#9ca3af"}
                         />
                     </View>
-                </ScrollView>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </View>
         </Modal>
     );

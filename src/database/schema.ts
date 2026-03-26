@@ -27,9 +27,17 @@ export const createTables = async () => {
         completed INTEGER DEFAULT 0,
         category TEXT,
         categoryColor TEXT,
-        createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+        createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        orderIndex INTEGER DEFAULT 0
       );
     `);
+
+    try {
+      // Add column if it doesn't exist for older installations
+      await db.execAsync(`ALTER TABLE todos ADD COLUMN orderIndex INTEGER DEFAULT 0;`);
+    } catch(e) {
+      // Ignore if column already exists
+    }
 
     // Vault Entries Table
     await db.execAsync(`

@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import "./global.css";
 
 import ProfileTab from './src/components/ProfileTab';
@@ -24,6 +24,8 @@ const Tab = createBottomTabNavigator();
 
 const MainNavigator = () => {
     const { darkMode } = useSettings();
+    const insets = useSafeAreaInsets();
+
     return (
         <NavigationContainer>
             <Tab.Navigator
@@ -49,9 +51,9 @@ const MainNavigator = () => {
                     tabBarStyle: {
                         backgroundColor: darkMode ? '#1f2937' : '#ffffff',
                         borderTopColor: darkMode ? '#374151' : '#e5e7eb',
-                        paddingBottom: 5,
+                        paddingBottom: Math.max(insets.bottom, 5),
                         paddingTop: 5,
-                        height: 60,
+                        height: 55 + Math.max(insets.bottom, 5),
                     },
                     headerShown: false,
                 })}
@@ -72,17 +74,25 @@ export default function App() {
 
     useEffect(() => {
         const setupApp = async () => {
+            // 1. Initialize database (Critical)
             try {
-                // Initialize database
                 await initDB();
                 await createTables();
                 setIsDBReady(true);
-
-                // Initialize RevenueCat
-                await PurchaseService.configure();
-                setIsRevenueCatReady(true);
             } catch (e) {
-                console.error('App setup failed:', e);
+                console.error('Database setup failed:', e);
+                // We still set ready so the app can show an error or blank state
+                // rather than hanging forever on the splash screen
+                setIsDBReady(true);
+            }
+
+            // 2. Initialize RevenueCat (Non-blocking)
+            try {
+                await PurchaseService.configure();
+            } catch (e) {
+                console.error('RevenueCat configuration failed:', e);
+            } finally {
+                setIsRevenueCatReady(true);
             }
         };
         setupApp();

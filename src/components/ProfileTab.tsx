@@ -11,7 +11,9 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    KeyboardAvoidingView,
+    Platform
 } from 'react-native';
 import { useSettings } from '../context/SettingsContext';
 import { FileService } from '../services/FileService';
@@ -173,6 +175,7 @@ export default function ProfileTab() {
                         </TouchableOpacity>
                     </View>
 
+                    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}>
                     <ScrollView style={styles.formContent}>
                         <TouchableOpacity style={styles.modalImageContainer} onPress={pickImage}>
                             {formData.profilePictureUri ? (
@@ -237,6 +240,7 @@ export default function ProfileTab() {
                             />
                         </View>
                     </ScrollView>
+                    </KeyboardAvoidingView>
                 </View>
             </Modal>
         </View>

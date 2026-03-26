@@ -63,6 +63,15 @@ const PasscodeEntry = ({ onUnlock, savedPasscode, colors, styles }) => {
         <Text style={[styles.passcodeTitle, { color: colors.onSurface }]}>Secure Vault</Text>
         <Text style={[styles.passcodeSubtitle, { color: colors.subtext }]}>Enter your passcode to continue</Text>
 
+        {savedPasscode === '1234' && (
+          <View style={styles.defaultPasscodeBanner}>
+            <Ionicons name="information-circle" size={16} color="#3b82f6" />
+            <Text style={styles.defaultPasscodeText}>
+              Default passcode is <Text style={{ fontWeight: 'bold' }}>1234</Text>. Change this in the Settings tab.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.passcodeInputContainer}>
           <TextInput
             style={[
@@ -110,11 +119,11 @@ const VaultItem = ({ entry, onDelete, onEdit, colors, categoryColors, visiblePas
           <Text style={[styles.vaultTitle, { color: colors.onSurface }]}>{entry.title}</Text>
           <View style={[
             styles.categoryBadge,
-            { backgroundColor: categoryColors[entry.category] + '20' }
+            { backgroundColor: (categoryColors[entry.category] || '#6b7280') + '20' }
           ]}>
             <Text style={[
               styles.categoryText,
-              { color: categoryColors[entry.category] }
+              { color: categoryColors[entry.category] || '#6b7280' }
             ]}>
               {entry.category}
             </Text>
@@ -192,6 +201,8 @@ const AddVaultModal = ({
   addEntry,
   newEntry,
   setNewEntry,
+  customCategory,
+  setCustomCategory,
   categories,
   categoryColors,
   colors,
@@ -231,31 +242,52 @@ const AddVaultModal = ({
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.subtext }]}>Category</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {categories.map((category) => (
+            {categories.map((category) => {
+              const displayColor = categoryColors[category] || '#6b7280';
+              return (
               <TouchableOpacity
                 key={category}
                 style={[
                   styles.categoryOption,
-                  newEntry.category === category && styles.selectedCategoryOption,
-                  { borderColor: categoryColors[category], backgroundColor: colors.surface }
+                  { borderColor: displayColor },
+                  newEntry.category === category
+                    ? { backgroundColor: displayColor }
+                    : { backgroundColor: colors.surface }
                 ]}
                 onPress={() => setNewEntry({ ...newEntry, category })}
               >
                 <View style={[
                   styles.categoryColorIndicator,
-                  { backgroundColor: categoryColors[category] }
+                  newEntry.category === category
+                    ? { backgroundColor: 'white' }
+                    : { backgroundColor: displayColor }
                 ]} />
                 <Text style={[
                   styles.categoryOptionText,
-                  { color: colors.subtext },
-                  newEntry.category === category && styles.selectedCategoryOptionText
+                  newEntry.category === category
+                    ? { color: 'white', fontWeight: 'bold' }
+                    : { color: colors.subtext }
                 ]}>
                   {category}
                 </Text>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </ScrollView>
         </View>
+
+        {newEntry.category === 'Other' && (
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.subtext }]}>Custom Category Name *</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              value={customCategory}
+              onChangeText={setCustomCategory}
+              placeholder="Enter category name"
+              placeholderTextColor={colors.subtext}
+            />
+          </View>
+        )}
 
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.subtext }]}>Username</Text>
@@ -360,6 +392,7 @@ const VaultTab = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingEntry, setEditingEntry] = useState(null);
+  const [customCategory, setCustomCategory] = useState("");
   const [newEntry, setNewEntry] = useState({
     title: '',
     username: '',
@@ -390,15 +423,27 @@ const VaultTab = () => {
       return;
     }
 
+    if (newEntry.category === 'Other' && !customCategory.trim()) {
+      Alert.alert('Error', 'Please enter a custom category name');
+      return;
+    }
+
+    const finalCategory = newEntry.category === 'Other' ? customCategory.trim() : newEntry.category;
+
     try {
       if (newEntry.id) {
         // Edit existing entry
-        await VaultService.updateEntry(newEntry);
+        const entryToUpdate = {
+          ...newEntry,
+          category: finalCategory,
+        };
+        await VaultService.updateEntry(entryToUpdate);
       } else {
         // Add new entry
         const entry = {
           ...newEntry,
           id: Date.now().toString(),
+          category: finalCategory,
         };
         await VaultService.addEntry(entry);
       }
@@ -413,7 +458,13 @@ const VaultTab = () => {
 
   const editEntry = (entry) => {
     setEditingEntry(entry);
-    setNewEntry(entry);
+    if (!categories.includes(entry.category) && entry.category !== 'Other') {
+      setNewEntry({ ...entry, category: 'Other' });
+      setCustomCategory(entry.category);
+    } else {
+      setNewEntry(entry);
+      setCustomCategory('');
+    }
     setShowAddDialog(true);
   };
 
@@ -425,6 +476,7 @@ const VaultTab = () => {
       notes: '',
       category: 'Email',
     });
+    setCustomCategory('');
     setEditingEntry(null);
     setShowAddDialog(false);
   };
@@ -570,6 +622,8 @@ const VaultTab = () => {
         addEntry={addEntry}
         newEntry={newEntry}
         setNewEntry={setNewEntry}
+        customCategory={customCategory}
+        setCustomCategory={setCustomCategory}
         categories={categories}
         categoryColors={categoryColors}
         colors={colors}
@@ -857,6 +911,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     textAlign: 'center',
+  },
+  defaultPasscodeBanner: {
+    marginTop: -16,
+    marginBottom: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#eff6ff',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    width: '100%',
+  },
+  defaultPasscodeText: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: '#1e3a8a',
+    flexShrink: 1,
   },
   modalContainer: {
     flex: 1,

@@ -11,7 +11,7 @@ export interface Todo {
 export const TodoService = {
     getAllTodos: async (): Promise<Todo[]> => {
         const db = await getDB();
-        const result = await db.getAllAsync('SELECT * FROM todos ORDER BY createdAt DESC');
+        const result = await db.getAllAsync('SELECT * FROM todos ORDER BY orderIndex DESC, createdAt DESC');
         return result.map((row: any) => ({
             ...row,
             completed: !!row.completed,
@@ -21,9 +21,9 @@ export const TodoService = {
     addTodo: async (todo: Todo): Promise<void> => {
         const db = await getDB();
         await db.runAsync(
-            `INSERT INTO todos (id, title, completed, category, categoryColor)
-       VALUES (?, ?, ?, ?, ?)`,
-            [todo.id, todo.title, todo.completed ? 1 : 0, todo.category, todo.categoryColor]
+            `INSERT INTO todos (id, title, completed, category, categoryColor, orderIndex)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+            [todo.id, todo.title, todo.completed ? 1 : 0, todo.category, todo.categoryColor, Date.now()]
         );
     },
 
@@ -46,12 +46,10 @@ export const TodoService = {
     },
 
     updateTodoOrder: async (todos: Todo[]): Promise<void> => {
-        // In a real app with order persistence, we'd update an 'order' column.
-        // For now, we'll just rely on createdAt or client-side reordering if needed,
-        // but since the UI uses DraggableFlatList, we might want to persist the order.
-        // For simplicity in this iteration, we won't persist custom drag order in DB yet
-        // unless requested, as it requires schema changes (adding orderIndex).
-        // We will just return for now.
-        return;
+        const db = await getDB();
+        for (let i = 0; i < todos.length; i++) {
+            const newOrderIndex = todos.length - i;
+            await db.runAsync('UPDATE todos SET orderIndex = ? WHERE id = ?', [newOrderIndex, todos[i].id]);
+        }
     }
 };

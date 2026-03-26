@@ -1,11 +1,16 @@
+import { Platform } from 'react-native';
+
 // RevenueCat Configuration
 export const REVENUECAT_CONFIG = {
     // API Keys
-    apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || '',
+    apiKey: Platform.select({
+        ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+        android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
+    }) || '',
 
     // Entitlements
     entitlements: {
-        ACCESS_RENEWAL: 'Access Renewal - 1 Year',
+        MANAGESELF_PRO: 'ManageSelf Pro',
     },
 
     // Product IDs

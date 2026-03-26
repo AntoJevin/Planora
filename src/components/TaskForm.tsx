@@ -3,7 +3,7 @@ import Slider from '@react-native-community/slider';
 import { format } from 'date-fns';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Switch, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { Task } from '../types';
 
 interface TaskFormProps {
@@ -44,7 +44,8 @@ export default function TaskForm({ selectedDate, onSave, onBack, editingTask }: 
     };
 
     return (
-        <ScrollView className="flex-1 bg-background p-4">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView className="flex-1 bg-background p-4">
             {/* Header */}
             <View className="flex-row items-center gap-4 mb-6">
                 <TouchableOpacity onPress={onBack} className="p-2">
@@ -169,6 +170,7 @@ export default function TaskForm({ selectedDate, onSave, onBack, editingTask }: 
                     </TouchableOpacity>
                 </View>
             </View>
-        </ScrollView>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }

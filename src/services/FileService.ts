@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 
-const documentDirectory = FileSystem.documentDirectory;
+const documentDirectory = (FileSystem as any).documentDirectory;
+
 
 export const FileService = {
     /**

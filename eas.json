@@ -12,7 +12,11 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_felIRrLDybFakVXZjLSaEZIAVfu",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_WlNmfIcrdZhCkuaAWsbkQcYcuat"
+      }
     }
   },
   "submit": {

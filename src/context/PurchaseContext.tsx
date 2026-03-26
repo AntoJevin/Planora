@@ -7,7 +7,7 @@ interface PurchaseContextType {
     customerInfo: CustomerInfo | null;
     offerings: PurchasesOfferings | null;
     isPremium: boolean;
-    hasAccessRenewal: boolean;
+    hasManageSelfPro: boolean;
     expirationDate: Date | null;
     daysRemaining: number;
     isLoading: boolean;
@@ -28,7 +28,7 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
     const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
     const [offerings, setOfferings] = useState<PurchasesOfferings | null>(null);
     const [isPremium, setIsPremium] = useState<boolean>(false);
-    const [hasAccessRenewal, setHasAccessRenewal] = useState<boolean>(false);
+    const [hasManageSelfPro, setHasManageSelfPro] = useState<boolean>(false);
     const [expirationDate, setExpirationDate] = useState<Date | null>(null);
     const [daysRemaining, setDaysRemaining] = useState<number>(0);
     const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -36,24 +36,33 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
 
     // Initialize and fetch customer info
     const refreshCustomerInfo = async () => {
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Subscription check timed out')), 10000)
+        );
+
         try {
             setIsLoading(true);
             setError(null);
 
-            const info = await PurchaseService.getCustomerInfo();
-            setCustomerInfo(info);
+            // Wrap the main logic in a promise to race against the timeout
+            const fetchInfoPromise = (async () => {
+                const info = await PurchaseService.getCustomerInfo();
+                setCustomerInfo(info);
 
-            const premium = await PurchaseService.isPremium();
-            setIsPremium(premium);
+                const premium = await PurchaseService.isPremium(info);
+                setIsPremium(premium);
 
-            const accessRenewal = await PurchaseService.hasAccessRenewal();
-            setHasAccessRenewal(accessRenewal);
+                const manageSelfPro = await PurchaseService.hasManageSelfPro(info);
+                setHasManageSelfPro(manageSelfPro);
 
-            const expiry = await PurchaseService.getExpirationDate();
-            setExpirationDate(expiry);
+                const expiry = await PurchaseService.getExpirationDate(info);
+                setExpirationDate(expiry);
 
-            const days = await PurchaseService.getDaysRemaining();
-            setDaysRemaining(days);
+                const days = await PurchaseService.getDaysRemaining(info);
+                setDaysRemaining(days);
+            })();
+
+            await Promise.race([fetchInfoPromise, timeoutPromise]);
         } catch (err: any) {
             console.error('Error refreshing customer info:', err);
             setError(err.message || 'Failed to load subscription info');
@@ -104,7 +113,7 @@ export const PurchaseProvider: React.FC<PurchaseProviderProps> = ({ children }) 
         customerInfo,
         offerings,
         isPremium,
-        hasAccessRenewal,
+        hasManageSelfPro,
         expirationDate,
         daysRemaining,
         isLoading,

@@ -18,7 +18,7 @@ const PremiumGate: React.FC<PremiumGateProps> = ({
     featureName,
     onUpgradePress
 }) => {
-    const { isPremium, hasAccessRenewal, isLoading } = usePurchase();
+    const { isPremium, hasManageSelfPro, isLoading } = usePurchase();
 
     // Show loading state
     if (isLoading) {
@@ -30,7 +30,7 @@ const PremiumGate: React.FC<PremiumGateProps> = ({
     }
 
     // If user has premium access, show the feature
-    if (isPremium || hasAccessRenewal) {
+    if (isPremium || hasManageSelfPro) {
         return <>{children}</>;
     }
 

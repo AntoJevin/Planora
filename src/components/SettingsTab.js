@@ -201,7 +201,7 @@ const SettingsTab = () => {
     } = useSettings();
     const {
         isPremium,
-        hasAccessRenewal,
+        hasManageSelfPro,
         daysRemaining,
         customerInfo,
         restorePurchases,
@@ -598,14 +598,14 @@ const SettingsTab = () => {
                         darkMode={darkMode}
                         styles={styles}
                         rightComponent={
-                            (isPremium || hasAccessRenewal) ? (
+                            (isPremium || hasManageSelfPro) ? (
                                 <View style={styles.premiumBadge}>
                                     <Ionicons name="checkmark-circle" size={20} color="#10b981" />
                                 </View>
                             ) : null
                         }
                     />
-                    {!(isPremium || hasAccessRenewal) && (
+                    {!(isPremium || hasManageSelfPro) && (
                         <SettingItem
                             icon="rocket-outline"
                             title="Upgrade to Premium"
@@ -629,7 +629,7 @@ const SettingsTab = () => {
                             <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
                         }
                     />
-                    {(isPremium || hasAccessRenewal) && (
+                    {(isPremium || hasManageSelfPro) && (
                         <SettingItem
                             icon="settings-outline"
                             title="Manage Subscription"

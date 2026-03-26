@@ -10,6 +10,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -163,8 +165,9 @@ const AddTodoModal = ({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.modalContent}>
-        <View style={styles.inputGroup}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}>
+        <ScrollView style={styles.modalContent}>
+          <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.subtext }]}>Task Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
@@ -183,8 +186,10 @@ const AddTodoModal = ({
                 key={category}
                 style={[
                   styles.categoryOption,
-                  newTodo.category === category && styles.selectedCategoryOption,
-                  { borderColor: categoryColors[category], backgroundColor: colors.surface }
+                  { borderColor: categoryColors[category] },
+                  newTodo.category === category
+                    ? { backgroundColor: categoryColors[category] }
+                    : { backgroundColor: colors.surface }
                 ]}
                 onPress={() => setNewTodo({
                   ...newTodo,
@@ -194,12 +199,15 @@ const AddTodoModal = ({
               >
                 <View style={[
                   styles.categoryColorIndicator,
-                  { backgroundColor: categoryColors[category] }
+                  newTodo.category === category
+                    ? { backgroundColor: 'white' }
+                    : { backgroundColor: categoryColors[category] }
                 ]} />
                 <Text style={[
                   styles.categoryOptionText,
-                  { color: colors.subtext },
-                  newTodo.category === category && styles.selectedCategoryOptionText
+                  newTodo.category === category
+                    ? { color: 'white', fontWeight: 'bold' }
+                    : { color: colors.subtext }
                 ]}>
                   {category}
                 </Text>
@@ -209,8 +217,10 @@ const AddTodoModal = ({
             <TouchableOpacity
               style={[
                 styles.categoryOption,
-                newTodo.category === 'Other' && styles.selectedCategoryOption,
-                { borderColor: '#6b7280', backgroundColor: colors.surface }
+                { borderColor: '#6b7280' },
+                newTodo.category === 'Other'
+                  ? { backgroundColor: '#6b7280' }
+                  : { backgroundColor: colors.surface }
               ]}
               onPress={() => setNewTodo({
                 ...newTodo,
@@ -220,12 +230,15 @@ const AddTodoModal = ({
             >
               <View style={[
                 styles.categoryColorIndicator,
-                { backgroundColor: '#6b7280' }
+                newTodo.category === 'Other'
+                  ? { backgroundColor: 'white' }
+                  : { backgroundColor: '#6b7280' }
               ]} />
               <Text style={[
                 styles.categoryOptionText,
-                { color: colors.subtext },
-                newTodo.category === 'Other' && styles.selectedCategoryOptionText
+                newTodo.category === 'Other'
+                  ? { color: 'white', fontWeight: 'bold' }
+                  : { color: colors.subtext }
               ]}>
                 Other
               </Text>
@@ -246,7 +259,8 @@ const AddTodoModal = ({
             />
           </View>
         )}
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   </Modal>
 );
@@ -494,6 +508,7 @@ const TodoTab = () => {
               }
             });
             setTodos(updatedTodos);
+            TodoService.updateTodoOrder(updatedTodos).catch(console.error);
           }}
           keyExtractor={(item) => item.id}
           renderItem={({ item, drag, isActive }) => (

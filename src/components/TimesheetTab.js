@@ -336,8 +336,8 @@ const TimesheetTab = () => {
     if (newTask.punchIn && newTask.punchOut) {
       const start = getDateTimeFromTime(newTask.punchIn);
       const end = getDateTimeFromTime(newTask.punchOut);
-      if (end < start) {
-        Alert.alert('Invalid Time', 'Punch out time cannot be earlier than punch in time.');
+      if (end <= start) {
+        Alert.alert('Invalid Time', 'Punch out time must be later than punch in time.');
         return;
       }
     }
@@ -457,16 +457,42 @@ const TimesheetTab = () => {
 
   // Update hours when punch in/out changes
   const handlePunchInChange = (text) => {
-    const updatedTask = { ...newTask, punchIn: text };
-    const hours = calculateHours(text, newTask.punchOut);
-    if (hours) updatedTask.hoursSpent = hours;
+    let updatedTask = { ...newTask, punchIn: text };
+    
+    if (newTask.punchOut) {
+      const start = getDateTimeFromTime(text);
+      const end = getDateTimeFromTime(newTask.punchOut);
+      
+      if (end <= start) {
+        Alert.alert('Invalid Time', 'Punch in time must be earlier than punch out time.');
+        updatedTask.punchOut = '';
+        updatedTask.hoursSpent = '';
+      } else {
+        const hours = calculateHours(text, newTask.punchOut);
+        updatedTask.hoursSpent = hours || '';
+      }
+    }
+    
     setNewTask(updatedTask);
   };
 
   const handlePunchOutChange = (text) => {
-    const updatedTask = { ...newTask, punchOut: text };
-    const hours = calculateHours(newTask.punchIn, text);
-    if (hours) updatedTask.hoursSpent = hours;
+    let updatedTask = { ...newTask, punchOut: text };
+    
+    if (newTask.punchIn) {
+      const start = getDateTimeFromTime(newTask.punchIn);
+      const end = getDateTimeFromTime(text);
+      
+      if (end <= start) {
+        Alert.alert('Invalid Time', 'Punch out time must be later than punch in time.');
+        updatedTask.punchOut = '';
+        updatedTask.hoursSpent = '';
+      } else {
+        const hours = calculateHours(newTask.punchIn, text);
+        updatedTask.hoursSpent = hours || '';
+      }
+    }
+    
     setNewTask(updatedTask);
   };
 
@@ -477,7 +503,7 @@ const TimesheetTab = () => {
     const period = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
     const minutesStr = minutes < 10 ? '0' + minutes : minutes;
-    return `${hours}:${minutesStr} ${period} `;
+    return `${hours}:${minutesStr} ${period}`;
   };
 
   // Convert 12-hour format string to Date object for picker value

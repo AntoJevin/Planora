@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.qsministry.manageself",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use FaceID for secure vault access."
@@ -46,7 +47,14 @@
         }
       ],
       "expo-sqlite",
-      "expo-local-authentication"
+      "expo-local-authentication",
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to set a profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
