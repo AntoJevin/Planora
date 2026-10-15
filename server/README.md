@@ -12,7 +12,7 @@ This small service is the secure boundary between Planora and Credence ID Cloud 
 
 ## Demo behavior
 
-The app opens `/verify/:id`, which displays a normal HTTPS QR code. Scan it with iPhone Camera to open the same page in Safari, then tap **Verify with Apple Wallet**. The page uses Credence's Digital Credentials API (`org-iso-mdoc`) flow, so Apple Wallet presents the mDL and sends its encrypted response to this service for verification.
+The app opens `/verify/:id`, which displays a normal HTTPS QR code. Scan it with iPhone Camera to open the same page in Safari, then tap **Verify with Apple Wallet**. The page passes Credence's complete mdoc request (`deviceRequest` and `encryptionInfo`) to the Digital Credentials API, then sends the encrypted wallet response to this service for verification.
 
 The mobile app receives no raw identity claims; it persists only verification status, credential type, issuer, and timestamp. Sessions are held in memory and expire after 10 minutes for this assignment demo, so a restart also invalidates them.
 
