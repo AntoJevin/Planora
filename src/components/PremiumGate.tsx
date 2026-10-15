@@ -42,9 +42,9 @@ const PremiumGate: React.FC<PremiumGateProps> = ({
                     <Ionicons name="lock-closed" size={32} color="#6366f1" />
                 </View>
 
-                <Text style={styles.title}>Premium Feature</Text>
+                <Text style={styles.title}>Access Required</Text>
                 <Text style={styles.description}>
-                    {featureName} is available for premium subscribers
+                    {featureName} is available with active access
                 </Text>
 
                 <TouchableOpacity
@@ -52,10 +52,10 @@ const PremiumGate: React.FC<PremiumGateProps> = ({
                     onPress={onUpgradePress}
                 >
                     <Ionicons name="star" size={20} color="white" />
-                    <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                    <Text style={styles.upgradeButtonText}>Renew Access for 1 Year</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.benefitsTitle}>Premium Benefits:</Text>
+                <Text style={styles.benefitsTitle}>Benefits:</Text>
                 <View style={styles.benefitsList}>
                     <BenefitItem text="Export data to PDF" />
                     <BenefitItem text="Unlimited tasks" />

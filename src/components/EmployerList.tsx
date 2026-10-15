@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 import React from 'react';
 import {
     Alert,
@@ -16,9 +17,10 @@ interface EmployerListProps {
     onEdit: (employer: Employer) => void;
     onDelete: (id: string) => void;
     onAdd: () => void;
+    onClose?: () => void;
 }
 
-export default function EmployerList({ employers, onEdit, onDelete, onAdd }: EmployerListProps) {
+export default function EmployerList({ employers, onEdit, onDelete, onAdd, onClose }: EmployerListProps) {
     const handleDelete = (employer: Employer) => {
         Alert.alert(
             'Delete Employer',
@@ -74,7 +76,14 @@ export default function EmployerList({ employers, onEdit, onDelete, onAdd }: Emp
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Manage Employers</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {onClose && (
+                        <TouchableOpacity onPress={onClose} style={{ marginRight: 4 }}>
+                            <Ionicons name="arrow-back" size={24} color="#111827" />
+                        </TouchableOpacity>
+                    )}
+                    <Text style={styles.title}>Manage Employers</Text>
+                </View>
                 <TouchableOpacity style={styles.addButton} onPress={onAdd}>
                     <Ionicons name="add" size={20} color="white" />
                     <Text style={styles.addButtonText}>Add Employer</Text>
@@ -85,7 +94,7 @@ export default function EmployerList({ employers, onEdit, onDelete, onAdd }: Emp
                 <View style={styles.emptyState}>
                     <Ionicons name="business-outline" size={48} color="#9ca3af" />
                     <Text style={styles.emptyText}>No employers added yet</Text>
-                    <Text style={styles.emptySubtext}>Tap "Add Employer" to get started</Text>
+                    <Text style={styles.emptySubtext}>Tap &quot;Add Employer&quot; to get started</Text>
                 </View>
             ) : (
                 <FlatList
@@ -101,9 +110,12 @@ export default function EmployerList({ employers, onEdit, onDelete, onAdd }: Emp
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#f8fafc',
-    },
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    paddingTop: Platform.OS === 'android' ? 40 : 20,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+},
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -171,21 +183,25 @@ const styles = StyleSheet.create({
     },
     details: {
         flex: 1,
+        flexWrap: 'wrap',
     },
     companyName: {
         fontSize: 16,
         fontWeight: '600',
         color: '#111827',
         marginBottom: 4,
+        flexShrink: 1,
     },
     supervisor: {
         fontSize: 13,
         color: '#6b7280',
         marginBottom: 2,
+        flexShrink: 1,
     },
     contact: {
         fontSize: 13,
         color: '#6b7280',
+        flexShrink: 1,
     },
     actions: {
         flexDirection: 'row',

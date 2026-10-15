@@ -98,7 +98,7 @@ export default function ProfileTab() {
     };
 
     const formatPhone = (text: string) => {
-        const cleaned = text.replace(/\D/g, '');
+        const cleaned = text.replace(/\D/g, '').slice(0, 10);
         const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,4})$/);
         if (match) {
             let formatted = match[1];

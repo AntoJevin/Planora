@@ -1,0 +1,54 @@
+
+> manageself@1.0.0 lint
+> expo lint
+
+env: load .env.local .env
+env: export EXPO_PUBLIC_REVENUECAT_IOS_API_KEY EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/EmployerList.tsx
+  88:59  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  88:72  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/MonthlyReport.tsx
+   95:11  warning  'averageHours' is assigned a value but never used                                                             @typescript-eslint/no-unused-vars
+  101:12  warning  React Hook useEffect has a missing dependency: 'width'. Either include it or remove the dependency array      react-hooks/exhaustive-deps
+  114:12  warning  React Hook useEffect has a missing dependency: 'fillWidth'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/SettingsTab.js
+  251:9   warning  'customerInfo' is assigned a value but never used                                 no-unused-vars
+  458:11  warning  'handleRateApp' is assigned a value but never used                                no-unused-vars
+  477:18  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/TaskCalendar.tsx
+   26:11  warning  'getTotalHoursForDate' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  115:81  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  115:90  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/TaskForm.tsx
+  24:56  warning  'isValid' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/TimesheetTab.js
+  455:14  warning  'error' is defined but never used. Allowed unused caught errors must match /^_/u  no-unused-vars
+  692:53  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                   react/no-unescaped-entities
+  692:62  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                   react/no-unescaped-entities
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/TodoTab.js
+  303:10  warning  'editingTodo' is assigned a value but never used  no-unused-vars
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/VaultTab.js
+  394:10  warning  'editingEntry' is assigned a value but never used  no-unused-vars
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/components/WeeklyReport.tsx
+   21:9   warning  'colors' is assigned a value but never used                      @typescript-eslint/no-unused-vars
+  419:22  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  443:22  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/database/schema.ts
+  38:13  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/antojevin/Desktop/QMinistry/timesheet/src/services/PurchaseService.ts
+  73:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  92:18  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 23 problems (8 errors, 15 warnings)
+

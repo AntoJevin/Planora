@@ -27,7 +27,7 @@ interface EmployerFormProps {
 
 export default function EmployerForm({ visible, employer, onSave, onCancel, darkMode }: EmployerFormProps) {
     const [formData, setFormData] = useState<Employer>({
-        id: 'employer_primary', // Always use the same ID
+        id: employer?.id || '',
         companyName: employer?.companyName || '',
         address: employer?.address || '',
         ein: employer?.ein || '',
@@ -38,17 +38,15 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
 
     // Update form data when employer prop changes
     React.useEffect(() => {
-        if (employer) {
-            setFormData({
-                id: 'employer_primary',
-                companyName: employer.companyName || '',
-                address: employer.address || '',
-                ein: employer.ein || '',
-                phoneNumber: employer.phoneNumber || '',
-                logoUri: employer.logoUri || '',
-                supervisorName: employer.supervisorName || '',
-            });
-        }
+        setFormData({
+            id: employer?.id || '',
+            companyName: employer?.companyName || '',
+            address: employer?.address || '',
+            ein: employer?.ein || '',
+            phoneNumber: employer?.phoneNumber || '',
+            logoUri: employer?.logoUri || '',
+            supervisorName: employer?.supervisorName || '',
+        });
     }, [employer]);
 
     const pickImage = async () => {
@@ -79,7 +77,10 @@ export default function EmployerForm({ visible, employer, onSave, onCancel, dark
             return;
         }
 
-        onSave(formData);
+        onSave({
+            ...formData,
+            id: formData.id || Date.now().toString(),
+        });
     };
 
     const formatEIN = (text: string) => {

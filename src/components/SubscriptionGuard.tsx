@@ -18,7 +18,7 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children }) => {
         return (
             <View style={styles.container}>
                 <ActivityIndicator size="large" color="#6366f1" />
-                <Text style={[styles.title, { marginTop: 12 }]}>Checking subscription...</Text>
+                <Text style={[styles.title, { marginTop: 12 }]}>Checking access...</Text>
             </View>
         );
     }

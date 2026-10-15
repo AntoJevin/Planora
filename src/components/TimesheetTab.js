@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -12,13 +13,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import CalendarPicker from 'react-native-calendar-picker';
+
 import { useSettings } from '../context/SettingsContext';
 import { EmployerService } from '../services/EmployerService';
 import { ProfileService } from '../services/ProfileService';
 import { TaskService } from '../services/TaskService';
 import { darkColors } from '../theme/darkTheme';
 import EmployerForm from './EmployerForm';
+import EmployerList from './EmployerList';
 import MonthlyReport from './MonthlyReport';
 import WeeklyReport from './WeeklyReport';
 
@@ -44,6 +46,7 @@ const TaskEntryModal = ({
   getDateTimeFromTime,
   colors,
   darkMode,
+  setShowEmployerSelect,
 }) => (
   <Modal
     visible={visible}
@@ -89,6 +92,24 @@ const TaskEntryModal = ({
           />
         </View>
 
+        {/* Employer Selector */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.subtext }]}>Employer</Text>
+          <TouchableOpacity
+            style={[styles.timePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setShowEmployerSelect(true)}
+          >
+            <Ionicons name="business-outline" size={20} color={darkMode ? "#64748b" : "#6b7280"} />
+            <Text style={[
+              styles.timePickerButtonText,
+              { color: newTask.employer ? colors.text : colors.subtext }
+            ]}>
+              {newTask.employer || 'Select employer'}
+            </Text>
+            <Ionicons name="chevron-down-outline" size={16} color={darkMode ? "#64748b" : "#6b7280"} style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+        </View>
+
         {/* Punch In */}
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: colors.subtext }]}>Punch In</Text>
@@ -127,6 +148,7 @@ const TaskEntryModal = ({
                 mode="time"
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                textColor={darkMode ? "#f1f5f9" : "#0f172a"}
                 onChange={onPunchInChange}
               />
             </View>
@@ -171,6 +193,7 @@ const TaskEntryModal = ({
                 mode="time"
                 is24Hour={false}
                 display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                textColor={darkMode ? "#f1f5f9" : "#0f172a"}
                 onChange={onPunchOutChange}
               />
             </View>
@@ -244,6 +267,63 @@ const ReportSelectionSheet = ({ visible, onClose, onSelect, darkMode }) => (
   </Modal>
 );
 
+const EmployerSelectionSheet = ({ visible, onClose, employers, onSelect, darkMode, colors }) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="fade"
+    onRequestClose={onClose}
+  >
+    <TouchableOpacity
+      style={styles.modalOverlay}
+      activeOpacity={1}
+      onPress={onClose}
+    >
+      <View style={[styles.bottomSheet, darkMode && { backgroundColor: '#1e293b' }]}>
+        <View style={[styles.sheetIndicator, darkMode && { backgroundColor: '#334155' }]} />
+        <Text style={[styles.sheetTitle, darkMode && { color: '#f1f5f9' }]}>Select Employer</Text>
+        <ScrollView style={{ maxHeight: 300 }} contentContainerStyle={styles.sheetOptions}>
+          {employers.length === 0 ? (
+            <Text style={{ textAlign: 'center', color: darkMode ? '#94a3b8' : '#6b7280', marginVertical: 20 }}>
+              No employers found. Please add an employer from the main screen.
+            </Text>
+          ) : (
+            employers.map((emp) => (
+              <TouchableOpacity
+                key={emp.id}
+                style={[styles.sheetOption, darkMode && { borderBottomColor: '#334155' }]}
+                onPress={() => onSelect(emp)}
+              >
+                {emp.logoUri ? (
+                  <View style={{ marginRight: 12 }}>
+                    <Image source={{ uri: emp.logoUri }} style={{ width: 36, height: 36, borderRadius: 8 }} />
+                  </View>
+                ) : (
+                  <View style={[styles.sheetIconBg, { backgroundColor: 'rgba(99, 102, 241, 0.1)', width: 36, height: 36, borderRadius: 8, marginRight: 12, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Ionicons name="business" size={18} color="#6366f1" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetOptionTitle, darkMode && { color: '#f1f5f9' }]}>{emp.companyName}</Text>
+                  {emp.supervisorName && (
+                    <Text style={[styles.sheetOptionSub, darkMode && { color: '#94a3b8' }]}>Supervisor: {emp.supervisorName}</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+        <TouchableOpacity
+          style={[styles.sheetCloseButton, darkMode && { backgroundColor: '#334155', marginTop: 12 }]}
+          onPress={onClose}
+        >
+          <Text style={[styles.sheetCloseText, darkMode && { color: '#f1f5f9' }]}>Cancel</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  </Modal>
+);
+
 const TimesheetTab = () => {
   const { darkMode } = useSettings();
   const colors = darkMode ? darkColors : {
@@ -279,8 +359,13 @@ const TimesheetTab = () => {
   });
 
   const [currentEmployer, setCurrentEmployer] = useState(null);
+  const [allEmployers, setAllEmployers] = useState([]);
+  const [showEmployerListModal, setShowEmployerListModal] = useState(false);
+  const [editingEmployer, setEditingEmployer] = useState(null);
+  const [showEmployerSelect, setShowEmployerSelect] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(null);
   const [showEmployerForm, setShowEmployerForm] = useState(false);
+  const [displayMonth, setDisplayMonth] = useState(new Date());
 
 
   useFocusEffect(
@@ -293,13 +378,22 @@ const TimesheetTab = () => {
 
   const loadEmployer = async () => {
     try {
-      const employer = await EmployerService.getEmployer();
-      setCurrentEmployer(employer);
-      if (employer) {
-        setNewTask(prev => ({ ...prev, employer: employer.companyName }));
+      const emps = await EmployerService.getAllEmployers();
+      setAllEmployers(emps);
+      const primary = emps.length > 0 ? emps[0] : null;
+      setCurrentEmployer(primary);
+      if (primary) {
+        setNewTask(prev => {
+          if (!prev.employer) {
+            return { ...prev, employer: primary.companyName };
+          }
+          return prev;
+        });
+      } else {
+        setNewTask(prev => ({ ...prev, employer: '' }));
       }
     } catch (error) {
-      console.error('Error loading employer:', error);
+      console.error('Error loading employers:', error);
     }
   };
 
@@ -325,6 +419,38 @@ const TimesheetTab = () => {
   const tasksForSelectedDate = tasks.filter(task =>
     task.date === selectedDate.toISOString().split('T')[0]
   );
+
+  // Compute total completed hours per day for calendar display
+  const dailyCompletedHours = useMemo(() => {
+    const hoursMap = {};
+    tasks.forEach(task => {
+      if (task.completed) {
+        const hours = parseFloat(task.hoursSpent) || 0;
+        hoursMap[task.date] = (hoursMap[task.date] || 0) + hours;
+      }
+    });
+    return hoursMap;
+  }, [tasks]);
+
+  // Generate calendar grid for the displayed month
+  const getCalendarDays = useCallback((year, month) => {
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const weeks = [];
+    let currentWeek = new Array(firstDay).fill(null);
+    for (let day = 1; day <= daysInMonth; day++) {
+      currentWeek.push(day);
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) currentWeek.push(null);
+      weeks.push(currentWeek);
+    }
+    return weeks;
+  }, []);
 
   const addTask = async () => {
     if (!newTask.title.trim()) {
@@ -367,7 +493,7 @@ const TimesheetTab = () => {
     setNewTask({
       title: '',
       description: '',
-      employer: '',
+      employer: currentEmployer ? currentEmployer.companyName : '',
       punchIn: '',
       punchOut: '',
       hoursSpent: '',
@@ -578,8 +704,7 @@ const TimesheetTab = () => {
   const handleSaveEmployer = async (employerData) => {
     try {
       await EmployerService.saveEmployer(employerData);
-      setCurrentEmployer(employerData);
-      setNewTask(prev => ({ ...prev, employer: employerData.companyName }));
+      await loadEmployer();
       setShowEmployerForm(false);
       Alert.alert('Success', 'Employer details saved');
     } catch (error) {
@@ -607,7 +732,7 @@ const TimesheetTab = () => {
         tasks={convertedTasks}
         onBack={() => setShowReports(false)}
         selectedDate={selectedDate}
-        employer={currentEmployer}
+        employers={allEmployers}
         employee={currentProfile}
       />
     ) : (
@@ -615,7 +740,7 @@ const TimesheetTab = () => {
         tasks={convertedTasks}
         onBack={() => setShowReports(false)}
         selectedDate={selectedDate}
-        employer={currentEmployer}
+        employers={allEmployers}
         employee={currentProfile}
       />
     );
@@ -632,7 +757,7 @@ const TimesheetTab = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() => setShowEmployerForm(true)}
+            onPress={() => setShowEmployerListModal(true)}
           >
             <Ionicons name="business" size={16} color="white" />
             <Text style={styles.headerButtonText}>Employer</Text>
@@ -650,18 +775,82 @@ const TimesheetTab = () => {
       <ScrollView style={styles.content}>
         {/* Calendar */}
         <View style={[styles.calendarContainer, { backgroundColor: colors.surface }, darkMode && { shadowColor: '#000', shadowOpacity: 0.3 }]}>
-          <CalendarPicker
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            textStyle={[styles.calendarText, { color: colors.onSurface }]}
-            selectedDayStyle={[styles.selectedDay, { backgroundColor: colors.primary }]}
-            selectedDayTextStyle={styles.selectedDayText}
-            previousComponent={<Ionicons name="chevron-back" size={20} color={colors.onSurface} />}
-            nextComponent={<Ionicons name="chevron-forward" size={20} color={colors.onSurface} />}
-            dayLabelsWrapper={styles.dayLabelsWrapper}
-            width={340}
-            scaleFactor={375}
-          />
+          {/* Month Navigation Header */}
+          <View style={styles.calMonthHeader}>
+            <TouchableOpacity
+              style={styles.calNavButton}
+              onPress={() => setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() - 1, 1))}
+            >
+              <Ionicons name="chevron-back" size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+            <Text style={[styles.calMonthTitle, { color: colors.onSurface }]}>
+              {displayMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </Text>
+            <TouchableOpacity
+              style={styles.calNavButton}
+              onPress={() => setDisplayMonth(new Date(displayMonth.getFullYear(), displayMonth.getMonth() + 1, 1))}
+            >
+              <Ionicons name="chevron-forward" size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Day Labels */}
+          <View style={styles.calDayLabelsRow}>
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(label => (
+              <View key={label} style={styles.calDayLabelCell}>
+                <Text style={[styles.calDayLabel, { color: colors.subtext }]}>{label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Calendar Grid */}
+          {getCalendarDays(displayMonth.getFullYear(), displayMonth.getMonth()).map((week, weekIdx) => (
+            <View key={weekIdx} style={styles.calWeekRow}>
+              {week.map((day, dayIdx) => {
+                if (day === null) {
+                  return <View key={dayIdx} style={styles.calDayCell} />;
+                }
+                const dateStr = `${displayMonth.getFullYear()}-${String(displayMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isSelected = selectedDate.toISOString().split('T')[0] === dateStr;
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                const isToday = todayStr === dateStr;
+                const completedHours = dailyCompletedHours[dateStr];
+
+                return (
+                  <TouchableOpacity
+                    key={dayIdx}
+                    style={styles.calDayCell}
+                    onPress={() => setSelectedDate(new Date(displayMonth.getFullYear(), displayMonth.getMonth(), day, 12))}
+                    activeOpacity={0.6}
+                  >
+                    <View style={[
+                      styles.calDayInner,
+                      isSelected && { backgroundColor: colors.primary },
+                      isToday && !isSelected && { backgroundColor: darkMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.1)' },
+                    ]}>
+                      <Text style={[
+                        styles.calDayText,
+                        { color: colors.onSurface },
+                        isSelected && styles.calDayTextSelected,
+                        isToday && !isSelected && { color: colors.primary, fontWeight: '700' },
+                      ]}>
+                        {day}
+                      </Text>
+                      {completedHours !== undefined && (
+                        <Text style={[
+                          styles.calHoursBadge,
+                          isSelected && styles.calHoursBadgeSelected,
+                        ]}>
+                          {completedHours % 1 === 0 ? `${completedHours}h` : `${completedHours.toFixed(1)}h`}
+                        </Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
         </View>
 
         {/* Tasks for Selected Date */}
@@ -687,7 +876,7 @@ const TimesheetTab = () => {
             <View style={styles.emptyState}>
               <Ionicons name="time" size={48} color="#9ca3af" />
               <Text style={styles.emptyText}>No tasks for this day</Text>
-              <Text style={styles.emptySubtext}>Tap "Add Task" to get started</Text>
+              <Text style={styles.emptySubtext}>Tap &quot;Add Task&quot; to get started</Text>
             </View>
           ) : (
             <View style={styles.tasksList}>
@@ -791,14 +980,59 @@ const TimesheetTab = () => {
         getDateTimeFromTime={getDateTimeFromTime}
         colors={colors}
         darkMode={darkMode}
+        setShowEmployerSelect={setShowEmployerSelect}
       />
 
       <EmployerForm
         visible={showEmployerForm}
-        employer={currentEmployer}
+        employer={editingEmployer}
         onSave={handleSaveEmployer}
         onCancel={() => setShowEmployerForm(false)}
         darkMode={darkMode}
+      />
+
+      <Modal
+        visible={showEmployerListModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEmployerListModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: darkMode ? '#0f172a' : '#f8fafc' }}>
+          <EmployerList
+            employers={allEmployers}
+            onClose={() => setShowEmployerListModal(false)}
+            onEdit={(emp) => {
+              setEditingEmployer(emp);
+              setShowEmployerForm(true);
+            }}
+            onDelete={async (id) => {
+              try {
+                await EmployerService.deleteEmployer(id);
+                await loadEmployer();
+                Alert.alert('Success', 'Employer deleted');
+              } catch (e) {
+                console.error(e);
+                Alert.alert('Error', 'Failed to delete employer');
+              }
+            }}
+            onAdd={() => {
+              setEditingEmployer(null);
+              setShowEmployerForm(true);
+            }}
+          />
+        </View>
+      </Modal>
+
+      <EmployerSelectionSheet
+        visible={showEmployerSelect}
+        onClose={() => setShowEmployerSelect(false)}
+        employers={allEmployers}
+        onSelect={(emp) => {
+          setNewTask(prev => ({ ...prev, employer: emp.companyName }));
+          setShowEmployerSelect(false);
+        }}
+        darkMode={darkMode}
+        colors={colors}
       />
 
       <ReportSelectionSheet
@@ -815,6 +1049,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    paddingBottom: 24,
   },
   header: {
     backgroundColor: '#6366f1',
@@ -1185,6 +1420,68 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+  },
+  // Custom Calendar styles
+  calMonthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    marginBottom: 4,
+  },
+  calNavButton: {
+    padding: 8,
+  },
+  calMonthTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  calDayLabelsRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    marginBottom: 2,
+  },
+  calDayLabelCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  calDayLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  calWeekRow: {
+    flexDirection: 'row',
+  },
+  calDayCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  calDayInner: {
+    width: 38,
+    minHeight: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 3,
+  },
+  calDayText: {
+    fontSize: 15,
+    fontWeight: '400',
+  },
+  calDayTextSelected: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  calHoursBadge: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#10b981',
+    marginTop: 1,
+  },
+  calHoursBadgeSelected: {
+    color: 'rgba(255, 255, 255, 0.9)',
   },
 });
 

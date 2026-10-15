@@ -112,7 +112,7 @@ export default function TaskCalendar({ tasks, onDateSelect, onViewReports, selec
                         <View className="items-center py-8">
                             <Feather name="clock" size={32} color="#9ca3af" style={{ marginBottom: 8, opacity: 0.5 }} />
                             <Text className="text-muted-foreground">No tasks for this day</Text>
-                            <Text className="text-sm text-muted-foreground">Tap "Add Task" to get started</Text>
+                            <Text className="text-sm text-muted-foreground">Tap &quot;Add Task&quot; to get started</Text>
                         </View>
                     )}
                 </View>

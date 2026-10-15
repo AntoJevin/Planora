@@ -22,6 +22,9 @@ export const clearAllData = async () => {
         await database.execAsync('DELETE FROM tasks');
         await database.execAsync('DELETE FROM todos');
         await database.execAsync('DELETE FROM vault_entries');
+        await database.execAsync('DELETE FROM employers');
+        await database.execAsync('DELETE FROM user_profiles');
+        await database.execAsync('DELETE FROM identity_verifications');
         console.log('All data cleared successfully');
     } catch (error) {
         console.error('Error clearing data:', error);

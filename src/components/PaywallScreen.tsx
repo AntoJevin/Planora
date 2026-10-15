@@ -61,7 +61,7 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({ onDismiss, onPurchaseComp
         try {
             await Purchases.purchasePackage(pkg);
             await refreshCustomerInfo();
-            Alert.alert('Success!', 'Your subscription is now active. Enjoy premium features!');
+            Alert.alert('Success!', 'Your access is now active. Thank you for renewing!');
             onPurchaseCompleted?.();
             onDismiss?.();
         } catch (e: any) {
@@ -100,8 +100,8 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({ onDismiss, onPurchaseComp
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>Unlock Premium</Text>
-            <Text style={styles.subtitle}>Supercharge your experience today.</Text>
+            <Text style={styles.title}>Renew Access</Text>
+            <Text style={styles.subtitle}>Purchase another year of access to continue using the app.</Text>
 
             {packages.map((pkg) => (
                 <TouchableOpacity 
@@ -130,107 +130,115 @@ const PaywallScreen: React.FC<PaywallScreenProps> = ({ onDismiss, onPurchaseComp
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flexGrow: 1,
-        padding: 24,
-        alignItems: 'center',
-        backgroundColor: '#f8fafc',
-        paddingTop: 60,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8fafc',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f8fafc',
-        padding: 24,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#4b5563',
-        marginBottom: 30,
-        textAlign: 'center',
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1e293b',
-        marginBottom: 10,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#64748b',
-        marginBottom: 40,
-        textAlign: 'center',
-    },
-    packageCard: {
-        width: '100%',
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        padding: 24,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    packageInfo: {
-        flex: 1,
-        paddingRight: 10,
-    },
-    packageName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1e293b',
-        marginBottom: 4,
-    },
-    packageDesc: {
-        fontSize: 14,
-        color: '#64748b',
-    },
-    packagePrice: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#6366f1',
-    },
-    footer: {
-        marginTop: 20,
-        width: '100%',
-        alignItems: 'center',
-    },
-    button: {
-        paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        backgroundColor: '#ebf4ff',
-        marginBottom: 12,
-        width: '100%',
-        alignItems: 'center',
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#4f46e5',
-    },
-    cancelButton: {
-        backgroundColor: 'transparent',
-    },
-    cancelText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#94a3b8',
-    },
+  container: {
+    flexGrow: 1,
+    padding: 24,
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    paddingTop: 60,
+    // Ensure content doesn't get hidden behind bottom buttons
+    paddingBottom: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 24,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#4b5563',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 10,
+    width: '100%',
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 40,
+    textAlign: 'center',
+    width: '100%',
+  },
+  packageCard: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  packageInfo: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  packageName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  packageDesc: {
+    fontSize: 14,
+    color: '#64748b',
+    flexShrink: 1,
+  },
+  packagePrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#6366f1',
+  },
+  footer: {
+    marginTop: 20,
+    width: '100%',
+    alignItems: 'center',
+    // Add bottom padding to prevent overlap with device safe area
+    paddingBottom: 24,
+  },
+  button: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#ebf4ff',
+    marginBottom: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4f46e5',
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+  },
+  cancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#94a3b8',
+  },
 });
 
 export default PaywallScreen;

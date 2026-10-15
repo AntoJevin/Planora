@@ -79,6 +79,19 @@ export const createTables = async () => {
       );
     `);
 
+    // Minimal receipt for a completed digital identity verification. Raw identity claims stay on the verification service.
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS identity_verifications (
+        id TEXT PRIMARY KEY,
+        verificationStatus TEXT NOT NULL,
+        remoteSessionId TEXT,
+        credentialType TEXT,
+        issuer TEXT,
+        verifiedAt TEXT,
+        updatedAt TEXT NOT NULL
+      );
+    `);
+
     console.log('Tables created successfully');
   } catch (error) {
     console.error('Error creating tables:', error);

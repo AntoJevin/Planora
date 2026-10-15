@@ -8,6 +8,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import "./global.css";
 
 import ProfileTab from './src/components/ProfileTab';
+import IdentityTab from './src/components/IdentityTab';
 import SettingsTab from './src/components/SettingsTab';
 import SubscriptionGuard from './src/components/SubscriptionGuard';
 import TimesheetTab from './src/components/TimesheetTab';
@@ -40,6 +41,8 @@ const MainNavigator = () => {
                             iconName = focused ? 'shield' : 'shield-outline';
                         } else if (route.name === 'Profile') {
                             iconName = focused ? 'person' : 'person-outline';
+                        } else if (route.name === 'Identity') {
+                            iconName = focused ? 'shield-checkmark' : 'shield-checkmark-outline';
                         } else if (route.name === 'Settings') {
                             iconName = focused ? 'settings' : 'settings-outline';
                         }
@@ -62,6 +65,7 @@ const MainNavigator = () => {
                 <Tab.Screen name="Todo" component={TodoTab} options={{ title: 'To-Do' }} />
                 <Tab.Screen name="Vault" component={VaultTab} options={{ title: 'Vault' }} />
                 <Tab.Screen name="Profile" component={ProfileTab} options={{ title: 'Profile' }} />
+                <Tab.Screen name="Identity" component={IdentityTab} options={{ title: 'Verified Profile' }} />
                 <Tab.Screen name="Settings" component={SettingsTab} options={{ title: 'Settings' }} />
             </Tab.Navigator>
         </NavigationContainer>

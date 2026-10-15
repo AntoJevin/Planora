@@ -497,16 +497,20 @@ const TodoTab = () => {
       ) : (
         <DraggableFlatList
           data={filteredTodos}
+          activationDistance={20}
           onDragEnd={({ data }) => {
-            // Update the main todos array with the new order
-            const updatedTodos = [...todos];
-            // Replace filtered items with reordered ones
-            filteredTodos.forEach((oldItem, index) => {
-              const todoIndex = updatedTodos.findIndex(t => t.id === oldItem.id);
-              if (todoIndex !== -1) {
-                updatedTodos[todoIndex] = data[index];
+            if (!data) return;
+            // Create a map for quick lookup
+            const newDataMap = new Map(data.map(item => [item.id, item]));
+            
+            // Update the main todos array by replacing local items with reordered ones
+            const updatedTodos = todos.map(todo => {
+              if (newDataMap.has(todo.id)) {
+                return newDataMap.get(todo.id);
               }
+              return todo;
             });
+
             setTodos(updatedTodos);
             TodoService.updateTodoOrder(updatedTodos).catch(console.error);
           }}

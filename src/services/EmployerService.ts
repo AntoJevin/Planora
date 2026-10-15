@@ -1,24 +1,22 @@
 import { getDB } from '../database/db';
 import { Employer } from '../types/employer';
 
-const SINGLE_EMPLOYER_ID = 'employer_primary';
-
 export const EmployerService = {
-    // Get the single employer record
-    getEmployer: async (): Promise<Employer | null> => {
+    // Get all employer records
+    getAllEmployers: async (): Promise<Employer[]> => {
         const db = await getDB();
-        const result = await db.getAllAsync('SELECT * FROM employers WHERE id = ?', [SINGLE_EMPLOYER_ID]);
-        return result.length > 0 ? (result[0] as Employer) : null;
+        const result = await db.getAllAsync('SELECT * FROM employers ORDER BY createdAt DESC');
+        return result as Employer[];
     },
 
-    // Save or update the single employer record
+    // Save or update an employer record
     saveEmployer: async (employer: Employer): Promise<void> => {
         const db = await getDB();
 
         // Check if employer exists
-        const existing = await EmployerService.getEmployer();
+        const existing = await db.getAllAsync('SELECT * FROM employers WHERE id = ?', [employer.id]);
 
-        if (existing) {
+        if (existing.length > 0) {
             // Update existing record
             await db.runAsync(
                 `UPDATE employers SET 
@@ -31,16 +29,16 @@ export const EmployerService = {
                     employer.phoneNumber || '',
                     employer.logoUri || '',
                     employer.supervisorName || '',
-                    SINGLE_EMPLOYER_ID
+                    employer.id
                 ]
             );
         } else {
-            // Insert new record with fixed ID
+            // Insert new record
             await db.runAsync(
                 `INSERT INTO employers (id, companyName, address, ein, phoneNumber, logoUri, supervisorName, createdAt)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    SINGLE_EMPLOYER_ID,
+                    employer.id,
                     employer.companyName,
                     employer.address || '',
                     employer.ein || '',
@@ -53,20 +51,23 @@ export const EmployerService = {
         }
     },
 
-    // Delete the employer record
-    deleteEmployer: async (): Promise<void> => {
+    // Delete the employer record by ID
+    deleteEmployer: async (id: string): Promise<void> => {
         const db = await getDB();
-        await db.runAsync('DELETE FROM employers WHERE id = ?', [SINGLE_EMPLOYER_ID]);
+        await db.runAsync('DELETE FROM employers WHERE id = ?', [id]);
     },
 
     // Legacy methods for compatibility (deprecated)
-    getAllEmployers: async (): Promise<Employer[]> => {
-        const employer = await EmployerService.getEmployer();
-        return employer ? [employer] : [];
+    getEmployer: async (): Promise<Employer | null> => {
+        const db = await getDB();
+        const result = await db.getAllAsync('SELECT * FROM employers ORDER BY createdAt ASC LIMIT 1');
+        return result.length > 0 ? (result[0] as Employer) : null;
     },
 
     getEmployerById: async (id: string): Promise<Employer | null> => {
-        return EmployerService.getEmployer();
+        const db = await getDB();
+        const result = await db.getAllAsync('SELECT * FROM employers WHERE id = ?', [id]);
+        return result.length > 0 ? (result[0] as Employer) : null;
     },
 
     addEmployer: async (employer: Employer): Promise<void> => {
@@ -77,4 +78,5 @@ export const EmployerService = {
         return EmployerService.saveEmployer(employer);
     }
 };
+
 
