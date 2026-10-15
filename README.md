@@ -73,7 +73,7 @@ After deploying or tunneling the adapter to its registered HTTPS domain, add the
 EXPO_PUBLIC_IDENTITY_API_BASE_URL=https://your-verified-domain.example
 ```
 
-The **Verified Profile** tab opens a QR/deep-link wallet flow and shows a minimal verification receipt when Credence returns a successful result.
+The **Verified Profile** tab opens an HTTPS QR page that can be scanned with iPhone Camera. In Safari, the candidate can consent to share their Apple Wallet mobile driver’s license through Credence's Digital Credentials API flow. Planora then stores only the resulting verification receipt.
 
 ## 📂 Project Structure
 

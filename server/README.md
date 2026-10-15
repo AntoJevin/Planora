@@ -1,6 +1,6 @@
 # Planora identity service
 
-This small service is the secure boundary between Planora and Credence ID Cloud SDK. It starts a QR/deep-link mobile ID session, polls Credence for its outcome, and returns only a minimal verification receipt to the app.
+This small service is the secure boundary between Planora and Credence ID Cloud SDK. It starts an Apple Wallet browser session, verifies the wallet response, and returns only a minimal verification receipt to the app.
 
 ## Setup
 
@@ -12,6 +12,10 @@ This small service is the secure boundary between Planora and Credence ID Cloud 
 
 ## Demo behavior
 
-The app opens `/verify/:id`, where the candidate can scan a QR code or use a wallet deep link. The mobile app receives no raw identity claims; it persists only verification status, credential type, issuer, and timestamp. Sessions are held in memory for this assignment demo, so restart the service to invalidate them.
+The app opens `/verify/:id`, which displays a normal HTTPS QR code. Scan it with iPhone Camera to open the same page in Safari, then tap **Verify with Apple Wallet**. The page uses Credence's Digital Credentials API (`org-iso-mdoc`) flow, so Apple Wallet presents the mDL and sends its encrypted response to this service for verification.
+
+The mobile app receives no raw identity claims; it persists only verification status, credential type, issuer, and timestamp. Sessions are held in memory and expire after 10 minutes for this assignment demo, so a restart also invalidates them.
+
+If an active request reports that its status cannot be read, check the service logs and confirm that the deployed `PUBLIC_ORIGIN` exactly matches the HTTPS domain registered with Credence, and that the deployed license key and reader profile are valid. The API intentionally returns only a safe error category to the app and never exposes provider credentials or tokens.
 
 For production, protect the app-facing endpoints with authentication, use shared session storage with expiration, and apply rate limiting before deploying.

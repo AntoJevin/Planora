@@ -12,7 +12,10 @@ import {
   View,
 } from "react-native";
 import { useSettings } from "../context/SettingsContext";
-import { IdentityVerificationService } from "../services/IdentityVerificationService";
+import {
+  IdentityVerificationRequestError,
+  IdentityVerificationService,
+} from "../services/IdentityVerificationService";
 import { darkColors } from "../theme/darkTheme";
 import { IdentityVerification } from "../types/identityVerification";
 
@@ -46,34 +49,57 @@ export default function IdentityTab() {
     }, [loadVerification]),
   );
 
-  const checkVerification = useCallback(async () => {
-    if (
-      !verification?.remoteSessionId ||
-      verification.verificationStatus !== "pending"
-    )
-      return;
-    setIsChecking(true);
-    try {
-      const result = await IdentityVerificationService.getRemoteStatus(
-        verification.remoteSessionId,
-      );
-      if (result.status !== "pending") {
-        await IdentityVerificationService.saveVerification({
-          verificationStatus: result.status,
-          remoteSessionId: verification.remoteSessionId,
-          credentialType: result.credentialType,
-          issuer: result.issuer,
-          verifiedAt: result.verifiedAt,
-          updatedAt: new Date().toISOString(),
-        });
-        await loadVerification();
+  const checkVerification = useCallback(
+    async (showError = false) => {
+      if (
+        !verification?.remoteSessionId ||
+        verification.verificationStatus !== "pending"
+      )
+        return;
+      setIsChecking(true);
+      try {
+        const result = await IdentityVerificationService.getRemoteStatus(
+          verification.remoteSessionId,
+        );
+        if (result.status !== "pending") {
+          await IdentityVerificationService.saveVerification({
+            verificationStatus: result.status,
+            remoteSessionId: verification.remoteSessionId,
+            credentialType: result.credentialType,
+            issuer: result.issuer,
+            verifiedAt: result.verifiedAt,
+            updatedAt: new Date().toISOString(),
+          });
+          await loadVerification();
+        }
+      } catch (error) {
+        if (
+          error instanceof IdentityVerificationRequestError &&
+          error.status === 404
+        ) {
+          await IdentityVerificationService.saveVerification({
+            verificationStatus: "failed",
+            remoteSessionId: verification.remoteSessionId,
+            updatedAt: new Date().toISOString(),
+          });
+          await loadVerification();
+          return;
+        }
+        console.error("Unable to check verification status:", error);
+        if (showError) {
+          Alert.alert(
+            "Unable to verify status",
+            error instanceof Error
+              ? error.message
+              : "Please try again shortly.",
+          );
+        }
+      } finally {
+        setIsChecking(false);
       }
-    } catch (error) {
-      console.error("Unable to check verification status:", error);
-    } finally {
-      setIsChecking(false);
-    }
-  }, [loadVerification, verification]);
+    },
+    [loadVerification, verification],
+  );
 
   useEffect(() => {
     if (verification?.verificationStatus !== "pending") return;
@@ -159,7 +185,9 @@ export default function IdentityTab() {
               ? `Verified ${verification?.verifiedAt ? new Date(verification.verifiedAt).toLocaleDateString() : "recently"}.`
               : status === "pending"
                 ? "Finish the request in your digital wallet. This screen will update automatically."
-                : "Use a digital ID from a supported wallet to verify access to sensitive account features."}
+                : status === "failed"
+                  ? "That verification session expired. Start a new request to try again."
+                  : "Use a digital ID from a supported wallet to verify access to sensitive account features."}
           </Text>
           {isVerified && (
             <View style={styles.receipt}>
@@ -222,7 +250,7 @@ export default function IdentityTab() {
         {status === "pending" && (
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={checkVerification}
+            onPress={() => checkVerification(true)}
             disabled={isChecking}
           >
             <Ionicons name="refresh-outline" size={19} color={colors.primary} />
